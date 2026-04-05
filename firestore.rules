@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── ユーザープロフィール ──
+    match /users/{uid} {
+      // 本人、または同じペアのメンバーのみ読み取り可能
+      allow read: if request.auth != null && (
+        request.auth.uid == uid
+        || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.pairId == get(/databases/$(database)/documents/users/$(uid)).data.pairId
+          && get(/databases/$(database)/documents/users/$(uid)).data.pairId != null
+        )
+      );
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── ペア ──
+    match /pairs/{pairId} {
+
+      // メンバー判定
+      function isMember() {
+        return request.auth != null
+               && request.auth.uid in resource.data.members;
+      }
+
+      // 招待token照合での参加判定
+      function isValidInvite() {
+        return request.auth != null
+               && resource.data.isActive == true
+               && request.resource.data.inviteToken == resource.data.inviteToken;
+      }
+
+      // 読み取り：認証済みユーザー全員（招待token照合のため）
+      allow read: if request.auth != null;
+
+      // 作成：認証済みユーザーが自分を members に含める場合のみ
+      allow create: if request.auth != null
+                    && request.auth.uid in request.resource.data.members;
+
+      // 更新：メンバーまたは有効な招待での参加
+      allow update: if isMember() || isValidInvite();
+
+      // 削除：メンバーのみ
+      allow delete: if isMember();
+
+      // ── アイテム（サブコレクション） ──
+      match /items/{itemId} {
+        function isPairMember() {
+          let pair = get(/databases/$(database)/documents/pairs/$(pairId));
+          return request.auth != null
+                 && request.auth.uid in pair.data.members;
+        }
+
+        allow read, write: if isPairMember();
+      }
+    }
+  }
+}

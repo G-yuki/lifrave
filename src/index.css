@@ -1,0 +1,227 @@
+/* src/index.css */
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+/* ── カスタムカラー・フォント定義（v4方式） ── */
+@theme {
+  --color-bg:            #f5f0eb;
+  --color-surface:       #fdfaf7;
+  --color-primary:       #7c6af7;
+  --color-primary-light: #ede9ff;
+  --color-secondary:     #f7a17c;
+  --color-accent:        #f7cf7c;
+  --color-text-main:     #2c2640;
+  --color-text-mid:      #6b6080;
+  --color-text-soft:     #b0aac0;
+  --color-border:        #e8e2f0;
+  --color-done:          #a8d8a0;
+
+  --font-sans: 'Noto Sans JP', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  --shadow-card:  0 2px 8px rgba(44,38,64,0.06);
+  --shadow-float: 0 4px 20px rgba(44,38,64,0.10);
+}
+
+/* ── ベースリセット ── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+}
+
+/* ── 共通コンポーネント ── */
+@layer components {
+
+  /* 認証画面 */
+  .auth-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 0 24px;
+    gap: 16px;
+  }
+
+  .auth-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .auth-sub {
+    font-size: 14px;
+    color: var(--color-text-mid);
+    text-align: center;
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .auth-error {
+    font-size: 14px;
+    color: #ef4444;
+    text-align: center;
+  }
+
+  .btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+    background: white;
+    border: 2px solid var(--color-border);
+    border-radius: 50px;
+    padding: 16px 24px;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text-main);
+    cursor: pointer;
+    box-shadow: var(--shadow-float);
+    transition: transform 0.18s ease;
+  }
+
+  .btn-google:active { transform: scale(0.97); }
+
+  /* ローディング */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    gap: 16px;
+  }
+
+  .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 4px solid var(--color-primary-light);
+    border-top-color: var(--color-primary);
+    animation: spin 0.8s linear infinite;
+  }
+
+  .loading-text {
+    font-size: 14px;
+    color: var(--color-text-mid);
+    font-weight: 700;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ボタン */
+  .btn-primary {
+    width: 100%;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 16px;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(124,106,247,0.35);
+    transition: transform 0.18s ease;
+  }
+
+  .btn-primary:active  { transform: scale(0.97); }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    width: 100%;
+    background: white;
+    color: var(--color-primary);
+    border: 2.5px solid var(--color-primary);
+    border-radius: 50px;
+    padding: 16px;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease;
+  }
+
+  .btn-secondary:active { transform: scale(0.97); }
+
+  .btn-ghost {
+    background: var(--color-primary-light);
+    color: var(--color-text-mid);
+    border: none;
+    border-radius: 50px;
+    padding: 8px 16px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease;
+  }
+
+  .btn-ghost:active { transform: scale(0.97); }
+
+  /* カード */
+  .card {
+    background: var(--color-surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* トースト */
+  .toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--color-text-main);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 9999;
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* モーダル */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(44,38,64,0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  .modal-overlay.open { display: flex; }
+}

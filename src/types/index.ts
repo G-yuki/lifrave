@@ -1,0 +1,72 @@
+// src/types/index.ts
+import { Timestamp } from "firebase/firestore";
+
+// ── ユーザー ──────────────────────────────────
+export interface User {
+  uid: string;
+  displayName: string;
+  pairId: string | null;
+  createdAt: Timestamp;
+}
+
+// ── ペア ──────────────────────────────────────
+export interface Hearing {
+  genres: string[];        // 好きな体験タイプ
+  prefecture: string;      // 都道府県
+  range: string;           // "county" | "neighbor" | "anywhere"
+  children: string;        // "none" | "infant" | "child" | "planned"
+  transport: string;       // "transit" | "car" | "both"
+  budget: string;          // "3000" | "5000" | "10000" | "30000" | "any"
+  indoor: string;          // "outdoor" | "indoor" | "both"
+  freetext: string;
+}
+
+export interface Pair {
+  pairId: string;
+  members: [string, string];
+  inviteToken: string;
+  isActive: boolean;
+  createdAt: Timestamp;
+  hearing?: Hearing;
+}
+
+// ── アイテム ──────────────────────────────────
+export type Category =
+  | "おでかけ"
+  | "映画"
+  | "本"
+  | "ゲーム"
+  | "食事"
+  | "音楽"
+  | "スポーツ"
+  | "その他";
+
+export type ItemType = "outdoor" | "indoor";
+export type Difficulty = "easy" | "special";
+export type ItemStatus = "unread" | "todo" | "done";
+
+export interface Item {
+  itemId: string;
+  title: string;             // 15文字以内
+  category: Category;
+  type: ItemType;
+  difficulty: Difficulty;
+  status: ItemStatus;
+  isWant: boolean;           // やりたい★フラグ
+  rating: number | null;     // 1〜5
+  memo: string | null;       // 100文字以内
+  completedAt: Timestamp | null;
+  createdAt: Timestamp;
+  placeId: string | null;
+  placeName: string | null;
+  placeRating: number | null;
+  placePhotoRef: string | null;
+}
+
+// AI生成時のアイテム（Firestore保存前）
+export interface ItemDraft {
+  title: string;
+  category: Category;
+  type: ItemType;
+  difficulty: Difficulty;
+}

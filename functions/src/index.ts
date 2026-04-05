@@ -1,18 +1,21 @@
 import { setGlobalOptions } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
 import Anthropic from "@anthropic-ai/sdk";
 
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
 
-const anthropic = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY,
-});
+const claudeApiKey = defineSecret("CLAUDE_API_KEY");
 
 // ── アイテム生成（ヒアリング結果 → 50件JSON） ──────────────
-export const generateItems = onCall({ invoker: "public" }, async (request) => {
+export const generateItems = onCall(
+  { invoker: "public", secrets: [claudeApiKey] },
+  async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "ログインが必要です。");
   }
+
+  const anthropic = new Anthropic({ apiKey: claudeApiKey.value() });
 
   const hearing = request.data?.hearing;
   if (!hearing) {

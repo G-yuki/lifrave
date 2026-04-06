@@ -44,7 +44,7 @@ export const AuthGuard = ({ children }: Props) => {
   if (!user) {
     return (
       <div className="auth-screen">
-        <p className="text-4xl mb-1">✈️</p>
+        <p className="text-4xl mb-1">🧭</p>
         <h1 className="auth-title">Lifrave</h1>
         <p className="text-sm font-bold mb-1"
            style={{ color: "var(--color-text-soft)" }}>

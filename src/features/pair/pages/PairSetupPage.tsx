@@ -57,7 +57,7 @@ export const PairSetupPage = () => {
         const result = await joinPair(user.uid, inviteParams.pairId, inviteParams.token);
         if (result.success) {
           window.history.replaceState({}, "", "/");
-          navigate("/home", { replace: true });
+          navigate("/setup/partner-waiting", { replace: true });
           return;
         }
         // 参加失敗（無効なリンク等）はそのままペア画面へ
@@ -103,7 +103,7 @@ export const PairSetupPage = () => {
       const result = await joinPair(user.uid, inviteParams.pairId, inviteParams.token);
       if (result.success) {
         window.history.replaceState({}, "", "/");
-        navigate("/home", { replace: true });
+        navigate("/setup/partner-waiting", { replace: true });
         return;
       }
     }

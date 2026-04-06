@@ -80,8 +80,9 @@ export const ItemDetailPage = () => {
           {item.title}
         </h2>
         <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
+                title={item.isWant ? "お気に入り解除" : "お気に入り登録"}
                 className="text-2xl">
-          {item.isWant ? "⭐" : "☆"}
+          {item.isWant ? "❤️" : "🤍"}
         </button>
       </div>
 

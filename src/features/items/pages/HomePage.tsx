@@ -102,7 +102,7 @@ export const HomePage = () => {
               style={{ background: "var(--color-bg)" }}>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold" style={{ color: "var(--color-text-main)" }}>
-            ✈️ Lifrave
+            🧭 Lifrave
           </h1>
           <button
             className="text-sm font-bold px-3 py-1 rounded-full"
@@ -136,7 +136,7 @@ export const HomePage = () => {
                 border: `1.5px solid ${filter === f ? "var(--color-primary)" : "var(--color-border)"}`,
               }}
             >
-              {f === "all" ? "すべて" : f === "want" ? "★ やりたい" : f}
+              {f === "all" ? "すべて" : f === "want" ? "❤️ お気に入り" : f}
             </button>
           ))}
         </div>
@@ -253,9 +253,9 @@ const SortableItem = ({
         </p>
       </button>
 
-      {/* ★ やりたい */}
+      {/* ❤️ やりたい */}
       <button onClick={onWant} className="flex-shrink-0 text-lg">
-        {item.isWant ? "⭐" : "☆"}
+        {item.isWant ? "❤️" : "🤍"}
       </button>
 
       {/* ドラッグハンドル（長押し） */}

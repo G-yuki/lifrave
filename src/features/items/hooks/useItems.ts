@@ -6,7 +6,6 @@ import {
   toggleWant,
   updateItemDetail,
   deleteItem,
-  reorderItems,
 } from "../services/itemService";
 import type { Item, ItemStatus } from "../../../types";
 
@@ -57,10 +56,5 @@ export const useItems = (pairId: string | null) => {
     return deleteItem(pairId, itemId);
   };
 
-  const reorder = (orderedIds: string[]) => {
-    if (!pairId) return Promise.resolve();
-    return reorderItems(pairId, orderedIds);
-  };
-
-  return { items, loading, setStatus, toggleIsWant, saveDetail, removeItem, reorder };
+  return { items, loading, setStatus, toggleIsWant, saveDetail, removeItem };
 };

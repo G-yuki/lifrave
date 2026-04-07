@@ -68,7 +68,7 @@ export const ItemDetailPage = () => {
 
   return (
     <div className="flex flex-col min-h-screen px-4 pt-10 pb-8"
-         style={{ background: "var(--color-bg)" }}>
+         style={{ background: "var(--color-bg)", fontFamily: "var(--font-sans)" }}>
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate("/home")}
@@ -98,7 +98,7 @@ export const ItemDetailPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold" style={{ color: "var(--color-text-main)" }}>
-              {isDone ? "✅ 完了！" : "やった？"}
+              {isDone ? "✅ 完了！" : "⏳ 未完了"}
             </p>
             {isDone && item.completedAt && (
               <p className="text-xs mt-0.5" style={{ color: "var(--color-text-soft)" }}>
@@ -145,7 +145,7 @@ export const ItemDetailPage = () => {
         </div>
         <textarea
           className="w-full text-sm outline-none resize-none rounded-xl p-2"
-          style={{ background: "var(--color-bg)", color: "var(--color-text-main)", minHeight: 80 }}
+          style={{ background: "var(--color-bg)", color: "var(--color-text-main)", minHeight: 160 }}
           placeholder="感想やメモを残そう..."
           maxLength={100}
           value={memo}

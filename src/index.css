@@ -1,29 +1,29 @@
 /* src/index.css */
 
 /* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
 
 @import "tailwindcss";
 
 /* ── カスタムカラー・フォント定義（v4方式） ── */
 @theme {
-  --color-bg:            #f5f0eb;
-  --color-surface:       #fdfaf7;
-  --color-primary:       #7c6af7;
-  --color-primary-light: #ede9ff;
+  --color-bg:            #F5F0E8;
+  --color-surface:       #FDFAF6;
+  --color-primary:       #C4622D;
+  --color-primary-light: #F5E6DE;
   --color-secondary:     #f7a17c;
   --color-accent:        #f7cf7c;
-  --color-text-main:     #2c2640;
-  --color-text-mid:      #6b6080;
-  --color-text-soft:     #b0aac0;
-  --color-border:        #e8e2f0;
+  --color-text-main:     #1A1410;
+  --color-text-mid:      #8B7355;
+  --color-text-soft:     #B8A898;
+  --color-border:        #E0D5C5;
   --color-done:          #a8d8a0;
 
-  --font-sans: 'Noto Sans JP', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'DM Sans', 'Noto Sans JP', sans-serif;
+  --font-serif: 'Noto Serif JP', serif;
 
-  --shadow-card:  0 2px 8px rgba(44,38,64,0.06);
-  --shadow-float: 0 4px 20px rgba(44,38,64,0.10);
+  --shadow-card:  0 2px 8px rgba(26,20,16,0.06);
+  --shadow-float: 0 4px 20px rgba(26,20,16,0.10);
 }
 
 /* ── ベースリセット ── */
@@ -33,15 +33,16 @@
     margin: 0;
     padding: 0;
   }
+}
 
-  body {
-    font-family: var(--font-sans);
-    background-color: var(--color-bg);
-    color: var(--color-text-main);
-    min-height: 100vh;
-    -webkit-tap-highlight-color: transparent;
-    overscroll-behavior: none;
-  }
+/* @layer 外に置くことで Tailwind preflight より優先される */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text-main);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 
 /* ── 共通コンポーネント ── */

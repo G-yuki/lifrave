@@ -19,7 +19,7 @@ export const AuthGuard = ({ children }: Props) => {
   if (isLineBrowser()) {
     return (
       <div className="auth-screen">
-        <h1 className="auth-title">Lifrave</h1>
+        <h1 className="auth-title">KataLog</h1>
         <div className="card w-full max-w-xs p-6 text-center mt-4">
           <p className="text-2xl mb-3">⚠️</p>
           <p className="text-sm font-bold mb-3"
@@ -44,11 +44,11 @@ export const AuthGuard = ({ children }: Props) => {
   if (!user) {
     return (
       <div className="auth-screen">
-        <p className="text-4xl mb-1">🧭</p>
-        <h1 className="auth-title">Lifrave</h1>
+        <p className="text-4xl mb-1">📖</p>
+        <h1 className="auth-title">KataLog</h1>
         <p className="text-sm font-bold mb-1"
            style={{ color: "var(--color-text-soft)" }}>
-          ふたりのやりたいことリスト
+          思い出を、かたちに。
         </p>
         <p className="auth-sub">
           {hasInvite
@@ -104,7 +104,7 @@ export const AuthGuard = ({ children }: Props) => {
 
         <div className="fixed bottom-0 left-0 right-0 text-center py-4"
              style={{ color: "var(--color-text-soft)" }}>
-          <p className="text-xs mb-2">© 2026 Lifrave</p>
+          <p className="text-xs mb-2">© 2026 KataLog</p>
           <div className="flex justify-center gap-3 text-xs">
             <a href="/terms" target="_blank" className="underline"
                style={{ color: "var(--color-text-soft)" }}>利用規約</a>

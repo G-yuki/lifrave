@@ -6,8 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KataLog</title>
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="margin:0;background:#F5F0E8;">
+    <div id="root">
+      <div style="position:fixed;inset:0;display:flex;align-items:center;
+                  justify-content:center;background:#F5F0E8;">
+        <div style="width:36px;height:36px;border-radius:50%;
+                    border:3px solid #E0D5C5;border-top-color:#C9A96E;
+                    animation:spin 0.8s linear infinite;"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

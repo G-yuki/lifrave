@@ -154,7 +154,7 @@ export const InquiryPage = () => {
                                fontFamily: "var(--font-sans)" }}>
                 送信内容を確認する
               </button>
-              <button onClick={() => navigate("/settings")}
+              <button onClick={() => navigate("/home")}
                       style={{ width: "100%", padding: "14px", background: "transparent",
                                color: "var(--color-text-mid)", border: "1px solid var(--color-border)",
                                borderRadius: 12, fontSize: 15, cursor: "pointer",

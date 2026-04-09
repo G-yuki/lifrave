@@ -14,12 +14,19 @@ export const AuthGuard = ({ children }: Props) => {
   const [agreed, setAgreed] = useState(false);
   const hasInvite = getInviteParams() !== null;
 
-  if (loading) return <Loading message="認証情報を確認中..." />;
+  if (loading) return (
+    <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center", gap: 20,
+                  background: "var(--color-bg)" }}>
+      <img src="/logo.png" alt="KataLog" style={{ height: 32, opacity: 0.9 }} />
+      <Loading />
+    </div>
+  );
 
   if (isLineBrowser()) {
     return (
       <div className="auth-screen">
-        <img src="/logo.png.png" alt="KataLog" style={{ height: 40 }} />
+        <img src="/logo.png" alt="KataLog" style={{ height: 40 }} />
         <div className="card w-full max-w-xs p-6 text-center mt-4">
           <p className="text-2xl mb-3">⚠️</p>
           <p className="text-sm font-bold mb-3"
@@ -44,16 +51,15 @@ export const AuthGuard = ({ children }: Props) => {
   if (!user) {
     return (
       <div className="auth-screen">
-        <p className="text-4xl mb-1">📖</p>
-        <img src="/logo.png.png" alt="KataLog" style={{ height: 40 }} />
+        <img src="/logo.png" alt="KataLog" style={{ height: 40 }} />
         <p className="text-sm font-bold mb-1"
-           style={{ color: "var(--color-text-soft)" }}>
+           style={{ fontSize: 12, color: "var(--color-text-soft)" }}>
           思い出を、かたちに。
         </p>
         <p className="auth-sub">
           {hasInvite
             ? "ログインしてパートナーと一緒に始めましょう"
-            : "AIがふたりにぴったりの体験を提案します"}
+            : "AIでふたりにぴったりの体験を提案します"}
         </p>
 
         {error && <p className="auth-error">{error}</p>}

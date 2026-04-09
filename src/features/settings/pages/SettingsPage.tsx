@@ -205,6 +205,18 @@ export const SettingsPage = () => {
           )}
         </div>
 
+        {/* 法的リンク */}
+        <div style={{ marginTop: 40, display: "flex", justifyContent: "center", gap: 20 }}>
+          <a href="/terms" target="_blank"
+             style={{ fontSize: 11, color: "var(--color-text-soft)", textDecoration: "underline" }}>
+            利用規約
+          </a>
+          <a href="/privacy" target="_blank"
+             style={{ fontSize: 11, color: "var(--color-text-soft)", textDecoration: "underline" }}>
+            プライバシーポリシー
+          </a>
+        </div>
+
       </div>
 
       {/* リストリセット確認ダイアログ */}

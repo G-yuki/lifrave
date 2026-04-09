@@ -8,6 +8,8 @@ import {
   arrayUnion,
   serverTimestamp,
   collection,
+  writeBatch,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../../firebase/firestore";
 import { generateInviteToken } from "../../../lib/token";
@@ -105,4 +107,36 @@ export const reissueInviteToken = async (pairId: string): Promise<string> => {
   const newToken = generateInviteToken();
   await updateDoc(doc(db, "pairs", pairId), { inviteToken: newToken });
   return newToken;
+};
+
+/**
+ * ペアを解除する
+ * - pair を isActive: false にする
+ * - ペアの全メンバーから pairId を削除する
+ * - items / pendingItems を削除する
+ */
+export const unpairUser = async (pairId: string): Promise<void> => {
+  const batch = writeBatch(db);
+
+  // pair を無効化
+  batch.update(doc(db, "pairs", pairId), { isActive: false });
+
+  // ペアメンバー全員の pairId を削除
+  const pairSnap = await getDoc(doc(db, "pairs", pairId));
+  if (pairSnap.exists()) {
+    const members = pairSnap.data().members as string[];
+    for (const memberId of members) {
+      batch.update(doc(db, "users", memberId), { pairId: null });
+    }
+  }
+
+  // items を削除
+  const itemsSnap = await getDocs(collection(db, "pairs", pairId, "items"));
+  itemsSnap.forEach((d) => batch.delete(d.ref));
+
+  // pendingItems を削除
+  const pendingSnap = await getDocs(collection(db, "pairs", pairId, "pendingItems"));
+  pendingSnap.forEach((d) => batch.delete(d.ref));
+
+  await batch.commit();
 };

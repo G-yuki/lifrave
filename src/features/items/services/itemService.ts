@@ -10,6 +10,7 @@ import {
   onSnapshot,
   type Unsubscribe,
   writeBatch,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../../firebase/firestore";
 import type { Item, ItemStatus, PendingItem, SwipeAction } from "../../../types";
@@ -70,6 +71,44 @@ export const deleteItem = async (
   itemId: string
 ): Promise<void> => {
   await deleteDoc(doc(db, "pairs", pairId, "items", itemId));
+};
+
+/** ふたりのリストをリセット（items + pendingItems を削除） */
+export const resetPairList = async (pairId: string): Promise<void> => {
+  const batch = writeBatch(db);
+  const [itemsSnap, pendingSnap] = await Promise.all([
+    getDocs(collection(db, "pairs", pairId, "items")),
+    getDocs(collection(db, "pairs", pairId, "pendingItems")),
+  ]);
+  itemsSnap.forEach((d) => batch.delete(d.ref));
+  pendingSnap.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+};
+
+/** Suggest で選択したアイテムをリストに直接追加 */
+export const addSuggestedItems = async (
+  pairId: string,
+  drafts: { title: string; category: string; type: string; difficulty: string }[]
+): Promise<void> => {
+  const batch = writeBatch(db);
+  drafts.forEach((draft) => {
+    const ref = doc(collection(db, "pairs", pairId, "items"));
+    batch.set(ref, {
+      ...draft,
+      status: "todo",
+      isWant: false,
+      matchTier: "good",
+      rating: null,
+      memo: null,
+      completedAt: null,
+      placeId: null,
+      placeName: null,
+      placeRating: null,
+      placePhotoRef: null,
+      createdAt: serverTimestamp(),
+    });
+  });
+  await batch.commit();
 };
 
 // ── Pending Items（ふたりのスワイプ前の一時保存） ──────────────

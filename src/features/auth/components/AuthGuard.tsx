@@ -19,7 +19,7 @@ export const AuthGuard = ({ children }: Props) => {
   if (isLineBrowser()) {
     return (
       <div className="auth-screen">
-        <h1 className="auth-title">KataLog</h1>
+        <img src="/logo.png.png" alt="KataLog" style={{ height: 40 }} />
         <div className="card w-full max-w-xs p-6 text-center mt-4">
           <p className="text-2xl mb-3">⚠️</p>
           <p className="text-sm font-bold mb-3"
@@ -45,7 +45,7 @@ export const AuthGuard = ({ children }: Props) => {
     return (
       <div className="auth-screen">
         <p className="text-4xl mb-1">📖</p>
-        <h1 className="auth-title">KataLog</h1>
+        <img src="/logo.png.png" alt="KataLog" style={{ height: 40 }} />
         <p className="text-sm font-bold mb-1"
            style={{ color: "var(--color-text-soft)" }}>
           思い出を、かたちに。

@@ -161,14 +161,14 @@ export const PairSetupPage = () => {
         <p className="text-sm text-center leading-relaxed"
            style={{ color: "var(--color-text-mid)" }}>
           アプリ内での表示名を入力してください。<br />
-          例：「ゆうき」「みお」
+          例：「あかり」「けんじ」
         </p>
 
         <input
           type="text"
           className="w-full max-w-xs border-2 rounded-2xl px-4 py-3 text-base font-medium outline-none transition-colors"
           style={{ borderColor: "var(--color-border)", color: "var(--color-text-main)" }}
-          placeholder="例：ゆうき"
+          placeholder="例：あかり"
           maxLength={10}
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}

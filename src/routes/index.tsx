@@ -1,6 +1,7 @@
 // src/routes/index.tsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthGuard } from "../features/auth/components/AuthGuard";
+import { PairProvider } from "../contexts/PairContext";
 import { PairSetupPage } from "../features/pair/pages/PairSetupPage";
 import { HearingPage } from "../features/setup/pages/HearingPage";
 import { SwipePage } from "../features/setup/pages/SwipePage";
@@ -8,6 +9,10 @@ import { PartnerWaitingPage } from "../features/setup/pages/PartnerWaitingPage";
 import { PartnerSwipePage } from "../features/setup/pages/PartnerSwipePage";
 import { HomePage } from "../features/items/pages/HomePage";
 import { ItemDetailPage } from "../features/items/pages/ItemDetailPage";
+import { SettingsPage } from "../features/settings/pages/SettingsPage";
+import { InquiryPage } from "../features/settings/pages/InquiryPage";
+import { SuggestPage } from "../features/suggest/pages/SuggestPage";
+import { MemoryPage } from "../features/memory/pages/MemoryPage";
 
 // Phase 4, 5, 6, 7 で実装するページのプレースホルダー
 const Placeholder = ({ label }: { label: string }) => (
@@ -28,6 +33,7 @@ export const AppRoutes = () => {
         path="/*"
         element={
           <AuthGuard>
+            <PairProvider>
             <Routes>
               <Route path="/" element={<PairSetupPage />} />
               <Route path="/setup" element={<HearingPage />} />
@@ -36,11 +42,13 @@ export const AppRoutes = () => {
               <Route path="/setup/partner-swipe" element={<PartnerSwipePage />} />
               <Route path="/home" element={<HomePage />} />
               <Route path="/home/:itemId" element={<ItemDetailPage />} />
-              <Route path="/suggest" element={<Placeholder label="提案" />} />
-              <Route path="/memory" element={<Placeholder label="思い出生成" />} />
-              <Route path="/settings" element={<Placeholder label="設定" />} />
+              <Route path="/suggest" element={<SuggestPage />} />
+              <Route path="/memory" element={<MemoryPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/inquiry" element={<InquiryPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </PairProvider>
           </AuthGuard>
         }
       />

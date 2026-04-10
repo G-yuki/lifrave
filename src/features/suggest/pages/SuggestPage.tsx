@@ -7,6 +7,8 @@ import { addSuggestedItems } from "../../items/services/itemService";
 import { usePair } from "../../../contexts/PairContext";
 import { db } from "../../../firebase/firestore";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../../firebase/functions";
 import {
   GENRES, PREFECTURES, CATEGORY_STYLE,
   RANGE_OPTIONS, CHILDREN_OPTIONS, TRANSPORT_OPTIONS, BUDGET_OPTIONS, INDOOR_OPTIONS,
@@ -91,6 +93,8 @@ export const SuggestPage = () => {
     setSaving(true);
     const drafts = [...selected].map((i) => suggestions[i]);
     await addSuggestedItems(pairId, drafts);
+    // バックグラウンドで追加分をエンリッチ（結果を待たない）
+    httpsCallable(functions, "enrichPairItems")({ pairId }).catch(() => {});
     setSaving(false);
     setStep("done");
   };
@@ -104,7 +108,9 @@ export const SuggestPage = () => {
       {/* ヘッダー */}
       <header style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 12,
                        padding: "30px 20px 14px",
-                       borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+                       borderBottom: "1px solid rgba(0,0,0,0.07)",
+                       position: "sticky", top: 0, zIndex: 20,
+                       background: "var(--color-bg)" }}>
         <button
           onClick={() => {
             if (step === "update-hearing") setStep("home");

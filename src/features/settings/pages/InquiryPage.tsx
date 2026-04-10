@@ -71,7 +71,9 @@ export const InquiryPage = () => {
       {/* ヘッダー */}
       <header style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 12,
                        padding: "30px 20px 14px",
-                       borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+                       borderBottom: "1px solid rgba(0,0,0,0.07)",
+                       position: "sticky", top: 0, zIndex: 20,
+                       background: "var(--color-bg)" }}>
         {step !== "done" && (
           <button
             onClick={() => step === "confirm" ? setStep("form") : navigate("/setting")}

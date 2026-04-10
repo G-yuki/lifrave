@@ -203,6 +203,89 @@ ${itemList}
   }
 );
 
+// ── ペア全件バックグラウンドエンリッチ ────────────────────────────────
+const PLACE_CATEGORIES = ["おでかけ", "食事", "スポーツ", "映画", "音楽"];
+
+export const enrichPairItems = onCall(
+  { invoker: "public", secrets: [mapsServerKey], enforceAppCheck: false, timeoutSeconds: 300 },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    const { pairId } = request.data as { pairId: string };
+    if (!pairId) {
+      throw new HttpsError("invalid-argument", "pairId が必要です。");
+    }
+
+    // prefecture を取得
+    const pairSnap = await admin.firestore().doc(`pairs/${pairId}`).get();
+    const prefecture = pairSnap.exists
+      ? (pairSnap.data()?.hearing?.prefecture as string | undefined)
+      : undefined;
+
+    // placeId === null かつ対象カテゴリのアイテムを全件取得
+    const itemsSnap = await admin.firestore()
+      .collection(`pairs/${pairId}/items`)
+      .where("placeId", "==", null)
+      .get();
+
+    const targets = itemsSnap.docs.filter((d) =>
+      PLACE_CATEGORIES.includes(d.data().category as string)
+    );
+
+    // 各アイテムを順次エンリッチ（レート制限のため 200ms ずつ待つ）
+    for (const docSnap of targets) {
+      const { title } = docSnap.data() as { title: string };
+      const textQuery = prefecture ? `${title} ${prefecture}` : title;
+
+      try {
+        const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": mapsServerKey.value(),
+            "X-Goog-FieldMask": "places.id,places.rating,places.photos,places.displayName",
+          },
+          body: JSON.stringify({
+            textQuery,
+            languageCode: "ja",
+            minRating: 3.5,
+            pageSize: 5,
+          }),
+        });
+
+        const data = await res.json() as {
+          places?: Array<{
+            id: string;
+            rating?: number;
+            photos?: Array<{ name: string }>;
+          }>;
+        };
+
+        const candidates = (data.places ?? [])
+          .filter((p) => p.rating != null && p.photos && p.photos.length > 0);
+        candidates.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+        const place = candidates[0] ?? null;
+
+        await docSnap.ref.update({
+          placeId:       place?.id                ?? "",
+          placeRating:   place?.rating             ?? null,
+          placePhotoRef: place?.photos?.[0]?.name  ?? null,
+        });
+      } catch (e) {
+        console.error(`enrichPairItems: failed for ${docSnap.id}`, e);
+        // 1件失敗しても続行
+      }
+
+      // レート制限対策
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    return { enriched: targets.length };
+  }
+);
+
 // ── Places エンリッチ（アイテムにGoogle Places情報を付与） ────────────
 export const enrichItem = onCall(
   { invoker: "public", secrets: [mapsServerKey], enforceAppCheck: false },
@@ -211,15 +294,19 @@ export const enrichItem = onCall(
       throw new HttpsError("unauthenticated", "ログインが必要です。");
     }
 
-    const { pairId, itemId, title } = request.data as {
+    const { pairId, itemId, title, prefecture } = request.data as {
       pairId: string;
       itemId: string;
       title: string;
+      prefecture?: string;
     };
 
     if (!pairId || !itemId || !title) {
       throw new HttpsError("invalid-argument", "パラメータが不足しています。");
     }
+
+    // 都道府県をクエリに追加してローカル検索精度を上げる
+    const textQuery = prefecture ? `${title} ${prefecture}` : title;
 
     try {
       const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
@@ -227,9 +314,14 @@ export const enrichItem = onCall(
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": mapsServerKey.value(),
-          "X-Goog-FieldMask": "places.id,places.rating,places.photos",
+          "X-Goog-FieldMask": "places.id,places.rating,places.photos,places.displayName",
         },
-        body: JSON.stringify({ textQuery: title }),
+        body: JSON.stringify({
+          textQuery,
+          languageCode: "ja",
+          minRating: 3.5,          // 低評価・関係ない場所を除外
+          pageSize: 5,             // 候補を複数取得して最良を選ぶ
+        }),
       });
 
       const data = await res.json() as {
@@ -237,18 +329,23 @@ export const enrichItem = onCall(
           id: string;
           rating?: number;
           photos?: Array<{ name: string }>;
+          displayName?: { text: string };
         }>;
       };
 
-      const place = data.places?.[0];
+      // 評価が高い順にソートして最良の候補を採用
+      const candidates = (data.places ?? [])
+        .filter((p) => p.rating != null && p.photos && p.photos.length > 0);
+      candidates.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      const place = candidates[0] ?? null;
 
       // placeId を "" にすることで「検索済みだが未発見」を表し、再呼び出しを防ぐ
       await admin.firestore()
         .doc(`pairs/${pairId}/items/${itemId}`)
         .update({
-          placeId:       place?.id            ?? "",
-          placeRating:   place?.rating         ?? null,
-          placePhotoRef: place?.photos?.[0]?.name ?? null,
+          placeId:       place?.id                   ?? "",
+          placeRating:   place?.rating                ?? null,
+          placePhotoRef: place?.photos?.[0]?.name     ?? null,
         });
 
       return { ok: true };

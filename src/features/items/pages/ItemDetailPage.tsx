@@ -6,6 +6,8 @@ import { functions } from "../../../firebase/functions";
 import { useItems } from "../hooks/useItems";
 import { Loading } from "../../../components/Loading";
 import { usePair } from "../../../contexts/PairContext";
+import { db } from "../../../firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import type { Item } from "../../../types";
 
 const MAPS_KEY = import.meta.env.VITE_MAPS_BROWSER_KEY as string;
@@ -14,8 +16,11 @@ const PLACE_CATEGORIES = ["おでかけ", "食事", "スポーツ", "映画", "�
 const photoUrl = (photoRef: string) =>
   `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=600&key=${MAPS_KEY}`;
 
-const mapsSearchUrl = (title: string) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title)}`;
+// placeId がある場合は場所直リンク（ルート検索にならない）、なければテキスト検索
+const mapsUrl = (title: string, placeId: string | null) =>
+  placeId
+    ? `https://www.google.com/maps/place/?api=1&place_id=${placeId}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title)}`;
 
 export const ItemDetailPage = () => {
   const { itemId } = useParams<{ itemId: string }>();
@@ -54,11 +59,19 @@ export const ItemDetailPage = () => {
     if (!needsEnrich) return;
 
     enrichCalled.current = true;
-    const fn = httpsCallable(functions, "enrichItem");
-    fn({ pairId, itemId: item.itemId, title: item.title }).catch(() => {
-      // エラーは無視（次回アクセス時にも placeId === null のまま再試行される）
-      enrichCalled.current = false;
-    });
+    (async () => {
+      // pair ドキュメントから prefecture を取得してクエリ精度を上げる
+      const pairSnap = await getDoc(doc(db, "pairs", pairId));
+      const prefecture = pairSnap.exists()
+        ? (pairSnap.data().hearing?.prefecture as string | undefined)
+        : undefined;
+
+      const fn = httpsCallable(functions, "enrichItem");
+      fn({ pairId, itemId: item.itemId, title: item.title, prefecture }).catch(() => {
+        // エラーは無視（次回アクセス時にも placeId === null のまま再試行される）
+        enrichCalled.current = false;
+      });
+    })();
   }, [item, pairId]);
 
   const handleTitleEdit = () => {
@@ -116,10 +129,10 @@ export const ItemDetailPage = () => {
   const isEnriching = item.placeId === null && isPlaceCategory;
 
   return (
-    <div className="flex flex-col min-h-screen pb-8"
-         style={{ background: "var(--color-bg)", fontFamily: "var(--font-sans)" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100dvh",
+                  background: "var(--color-bg)", fontFamily: "var(--font-sans)" }}>
 
-      {/* サムネイル（写真あり） */}
+      {/* ── 固定ヘッダー（写真あり / なし） ── */}
       {hasPhoto ? (
         <div style={{ position: "relative", width: "100%", height: 220, flexShrink: 0 }}>
           <img
@@ -141,15 +154,9 @@ export const ItemDetailPage = () => {
                     strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          {/* お気に入りボタン（写真上） */}
-          <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
-                  style={{ position: "absolute", top: 12, right: 14, background: "none",
-                           border: "none", cursor: "pointer", fontSize: 26 }}>
-            {item.isWant ? "❤️" : "🤍"}
-          </button>
-          {/* Google評価（写真上） */}
+          {/* Google評価（左下） */}
           {item.placeRating != null && (
-            <div style={{ position: "absolute", bottom: 12, right: 14,
+            <div style={{ position: "absolute", bottom: 12, left: 14,
                           background: "rgba(0,0,0,0.55)", borderRadius: 20,
                           padding: "4px 10px", display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ fontSize: 13, color: "#FFD700" }}>★</span>
@@ -158,29 +165,31 @@ export const ItemDetailPage = () => {
               </span>
             </div>
           )}
+          {/* お気に入りボタン（右下） */}
+          <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
+                  style={{ position: "absolute", bottom: 10, right: 14, background: "none",
+                           border: "none", cursor: "pointer", fontSize: 26 }}>
+            {item.isWant ? "❤️" : "🤍"}
+          </button>
         </div>
       ) : (
-        /* 写真なし：通常ヘッダー */
-        <div style={{ paddingTop: 40, paddingLeft: 16, paddingRight: 16 }}>
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(backTo)}
-                    style={{ background: "none", border: "none", cursor: "pointer",
-                             padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
-                      strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <div style={{ flex: 1 }} />
-            <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
-                    className="text-2xl">
-              {item.isWant ? "❤️" : "🤍"}
-            </button>
-          </div>
+        /* 写真なし：通常ヘッダー（戻るボタンのみ） */
+        <div style={{ flexShrink: 0, paddingTop: 40, paddingLeft: 16, paddingRight: 16,
+                      paddingBottom: 8, background: "var(--color-bg)" }}>
+          <button onClick={() => navigate(backTo)}
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                           padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
       )}
 
-      <div className="px-4 pt-5">
+      {/* スクロールエリア */}
+      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
+      <div className="px-4 pt-5 pb-8">
         {/* タイトル */}
         <div className="flex items-center gap-2 mb-4">
           {editingTitle ? (
@@ -215,21 +224,29 @@ export const ItemDetailPage = () => {
         </div>
 
         {/* カテゴリ・タグ */}
-        <div className="flex gap-2 mb-5 flex-wrap">
+        <div className="flex gap-2 mb-5 flex-wrap items-center">
           <Tag label={item.category} />
           <Tag label={item.difficulty === "easy" ? "気軽" : "特別"} />
           <Tag label={item.type === "outdoor" ? "屋外" : "屋内"} />
           {isEnriching && (
-            <span style={{ fontSize: 11, color: "var(--color-text-soft)", alignSelf: "center" }}>
+            <span style={{ fontSize: 11, color: "var(--color-text-soft)" }}>
               地図情報を取得中...
             </span>
+          )}
+          {/* 写真なし時のハート（写真ありは写真上の右下に表示） */}
+          {!hasPhoto && (
+            <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
+                    style={{ marginLeft: "auto", background: "none", border: "none",
+                             cursor: "pointer", fontSize: 22, lineHeight: 1 }}>
+              {item.isWant ? "❤️" : "🤍"}
+            </button>
           )}
         </div>
 
         {/* Google マップリンク */}
         {isPlaceCategory && (
           <a
-            href={mapsSearchUrl(item.title)}
+            href={mapsUrl(item.title, item.placeId)}
             target="_blank"
             rel="noopener noreferrer"
             className="card p-4 mb-4"
@@ -330,6 +347,7 @@ export const ItemDetailPage = () => {
           このアイテムを削除する
         </button>
       </div>
+      </div>{/* /スクロールエリア */}
     </div>
   );
 };

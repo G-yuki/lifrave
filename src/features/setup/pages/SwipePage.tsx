@@ -10,6 +10,8 @@ import {
   markSwipesDoneAndCheck,
   finalizePairMatching,
 } from "../../items/services/itemService";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../../firebase/functions";
 import { SwipeTutorial } from "../components/SwipeTutorial";
 import { db } from "../../../firebase/firestore";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -96,9 +98,13 @@ export const SwipePage = () => {
         if (bothDone) {
           // 自分が最後 → マッチング実行
           await finalizePairMatching(pairId);
+          // バックグラウンドで全件エンリッチ（結果を待たない）
+          httpsCallable(functions, "enrichPairItems")({ pairId }).catch(() => {});
           navigate("/home", { replace: true });
         } else {
           // 相手待ち → onSnapshotで matchingFinalized を監視
+          // 待機時間を活用してバックグラウンドでエンリッチ開始
+          httpsCallable(functions, "enrichPairItems")({ pairId }).catch(() => {});
           setSaving(false);
           setWaitingPartner(true);
         }

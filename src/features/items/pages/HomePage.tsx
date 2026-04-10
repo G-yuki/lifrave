@@ -13,6 +13,10 @@ import type { Item, Category } from "../../../types";
 type Filter = "all" | Category;
 
 const CATEGORIES: Category[] = ["おでかけ", "映画", "食事", "本", "ゲーム", "音楽", "スポーツ", "その他"];
+const MAPS_KEY = import.meta.env.VITE_MAPS_BROWSER_KEY as string;
+
+const photoUrl = (photoRef: string) =>
+  `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${MAPS_KEY}`;
 
 export const HomePage = () => {
   const navigate = useNavigate();
@@ -42,7 +46,6 @@ export const HomePage = () => {
   const activeItems = items.filter((i) => i.status !== "done");
   const doneItems   = items.filter((i) => i.status === "done");
   const goItems     = activeItems.filter((i) => i.isWant);
-  // matchTier未設定（旧データ）は "good" 扱い
   const goodItems   = activeItems.filter((i) => !i.isWant && (i.matchTier ?? "good") !== "try");
   const tryItems    = activeItems.filter((i) => !i.isWant && i.matchTier === "try");
 
@@ -61,19 +64,15 @@ export const HomePage = () => {
       {/* ── ヘッダー ── */}
       <header style={{ flexShrink: 0, padding: "12px 20px 10px",
                        background: "var(--color-bg)", borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
-        {/* 上段：ロゴ＋ペア名 ↔ 進捗バッジ */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* 左：ロゴ＋ペア名 */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <img src="/logo.png" alt="KataLog" style={{ height: 25 }} />
             {pairNames && (
-              <p style={{ fontSize: 11, color: "var(--color-text-soft)",
-                          letterSpacing: "0.05em" }}>
+              <p style={{ fontSize: 11, color: "var(--color-text-soft)", letterSpacing: "0.05em" }}>
                 {pairNames}
               </p>
             )}
           </div>
-          {/* 右：完了バッジ＋リスト総数 */}
           {items.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
@@ -85,14 +84,12 @@ export const HomePage = () => {
                   /{items.length}
                 </span>
               </div>
-              <span style={{ fontSize: 10, color: "var(--color-text-soft)",
-                             letterSpacing: "0.04em" }}>
+              <span style={{ fontSize: 10, color: "var(--color-text-soft)", letterSpacing: "0.04em" }}>
                 完了
               </span>
             </div>
           )}
         </div>
-        {/* 下段：進捗バー */}
         {items.length > 0 && (
           <div style={{ height: 3, background: "rgba(0,0,0,0.08)",
                         borderRadius: 2, overflow: "hidden", marginTop: 8 }}>
@@ -103,7 +100,7 @@ export const HomePage = () => {
         )}
       </header>
 
-      {/* ── フィルター（常時表示） ── */}
+      {/* ── フィルター ── */}
       <div style={{ flexShrink: 0, padding: "10px 20px 8px", display: "flex", gap: 6,
                     overflowX: "auto", scrollbarWidth: "none",
                     background: "var(--color-bg)", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
@@ -159,7 +156,6 @@ export const HomePage = () => {
           )
         )}
 
-        {/* カテゴリフィルターで絞った結果が0件かつ全体には残りがある場合 */}
         {filteredGood.length === 0 && goodItems.length > 0 && (
           <div style={{ padding: "40px 20px", textAlign: "center" }}>
             <p style={{ fontSize: 13, color: "var(--color-text-soft)" }}>
@@ -168,7 +164,7 @@ export const HomePage = () => {
           </div>
         )}
 
-        {/* Try トグル（片方がPassしたアイテム） */}
+        {/* TRY トグル */}
         {tryItems.length > 0 && (
           <>
             <button onClick={() => setTryOpen((o) => !o)}
@@ -231,20 +227,18 @@ export const HomePage = () => {
       <nav style={{ flexShrink: 0, background: "var(--color-bg)",
                     borderTop: "1px solid rgba(0,0,0,0.08)" }}>
         <div style={{ display: "flex", padding: "10px 0 6px" }}>
-          {NAV_ITEMS.map(({ path, label, icon }) => {
-            return (
-              <button key={path} onClick={() => navigate(path)}
-                      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-                               gap: 3, background: "transparent", border: "none", cursor: "pointer",
-                               color: "var(--color-text-mid)" }}>
-                {icon}
-                <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase",
-                               fontWeight: 500, fontFamily: "var(--font-sans)" }}>
-                  {label}
-                </span>
-              </button>
-            );
-          })}
+          {NAV_ITEMS.map(({ path, label, icon }) => (
+            <button key={path} onClick={() => navigate(path)}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+                             gap: 3, background: "transparent", border: "none", cursor: "pointer",
+                             color: "var(--color-text-mid)" }}>
+              {icon}
+              <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase",
+                             fontWeight: 500, fontFamily: "var(--font-sans)" }}>
+                {label}
+              </span>
+            </button>
+          ))}
         </div>
         <p style={{ textAlign: "center", fontSize: 9, letterSpacing: "0.12em",
                     color: "var(--color-text-soft)", paddingBottom: 16,
@@ -269,30 +263,45 @@ const SectionLabel = ({ children, style }: { children: React.ReactNode; style?: 
 const GoCard = ({ item, onClick, onDone, onWant }:
   { item: Item; onClick: () => void; onDone: () => void; onWant: () => void }) => {
   const s = CATEGORY_STYLE[item.category] ?? CATEGORY_STYLE["その他"];
+  const hasPhoto = !!item.placePhotoRef;
   return (
-    <div style={{ flexShrink: 0, width: 120, height: 150, borderRadius: 12, overflow: "hidden",
-                  position: "relative" }}>
-      {/* 背景 */}
-      <div style={{ position: "absolute", inset: 0, background: s.bg }} />
-      {/* 絵文字 */}
-      <div style={{ position: "absolute", inset: 0, display: "flex",
-                    alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 40, opacity: 0.88,
-                       filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.4))" }}>
-          {s.emoji}
-        </span>
-      </div>
-      {/* 評価バッジ（左上） */}
-      {item.rating != null && (
+    // カード全体をボタンにしてタップ判定を全面に
+    <button onClick={onClick}
+            style={{ flexShrink: 0, width: 120, height: 150, borderRadius: 12, overflow: "hidden",
+                     position: "relative", border: "none", padding: 0, cursor: "pointer" }}>
+      {/* 背景：写真 or グラデーション */}
+      {hasPhoto ? (
+        <img src={photoUrl(item.placePhotoRef!)} alt={item.title}
+             style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
+                      objectFit: "cover" }} />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: s.bg }} />
+      )}
+      {/* 絵文字（写真なしのみ） */}
+      {!hasPhoto && (
+        <div style={{ position: "absolute", inset: 0, display: "flex",
+                      alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 40, opacity: 0.88,
+                         filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.4))" }}>
+            {s.emoji}
+          </span>
+        </div>
+      )}
+      {/* 暗幕オーバーレイ */}
+      <div style={{ position: "absolute", inset: 0,
+                    background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, transparent 40%, rgba(0,0,0,0.7) 100%)",
+                    pointerEvents: "none" }} />
+      {/* Google評価バッジ（左上） */}
+      {item.placeRating != null && (
         <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.5)",
                       color: "#fff", fontSize: 9, padding: "2px 6px", borderRadius: 20,
                       display: "flex", alignItems: "center", gap: 2, zIndex: 2 }}>
-          <span style={{ color: "#F5C842" }}>★</span>{item.rating}
+          <span style={{ color: "#F5C842" }}>★</span>{item.placeRating.toFixed(1)}
         </div>
       )}
       {/* ✓ 完了ボタン（右上） */}
       <button onClick={(e) => { e.stopPropagation(); onDone(); }}
-              style={{ position: "absolute", top: 7, right: 7.5, zIndex: 2,
+              style={{ position: "absolute", top: 7, right: 7.5, zIndex: 3,
                        width: 17, height: 17, borderRadius: "50%",
                        background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.5)",
                        display: "flex", alignItems: "center", justifyContent: "center",
@@ -301,56 +310,62 @@ const GoCard = ({ item, onClick, onDone, onWant }:
           <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
-      {/* 下部グラデーション */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 55,
-                    background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
-                    pointerEvents: "none" }} />
-      {/* カード本体タップ */}
-      <button onClick={onClick}
-              style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
-                       padding: "8px 28px 9px 10px", background: "none", border: "none",
-                       cursor: "pointer", textAlign: "left" }}>
+      {/* タイトル・カテゴリ（下部） */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
+                    padding: "8px 28px 9px 10px", textAlign: "left" }}>
         <div style={{ fontSize: 9, letterSpacing: "0.08em",
                       color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-sans)",
                       marginBottom: 3 }}>
           {item.category}
         </div>
-        <p style={{ fontSize: 10, width: "95%", fontWeight: 500, color: "#fff", lineHeight: 1.35,
-                    fontFamily: "var(--font-sans)",
+        <p style={{ fontSize: 10, fontWeight: 500, color: "#fff", lineHeight: 1.35,
+                    fontFamily: "var(--font-sans)", margin: 0,
                     display: "-webkit-box", WebkitLineClamp: 1,
                     WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {item.title}
         </p>
-      </button>
-      {/* ❤️ お気に入り解除（右 ✓ の下） */}
+      </div>
+      {/* ❤️ お気に入り（右下） */}
       <button onClick={(e) => { e.stopPropagation(); onWant(); }}
-              style={{ position: "absolute", bottom: 11, right: 8, zIndex: 2,
+              style={{ position: "absolute", bottom: 11, right: 8, zIndex: 3,
                        background: "transparent", border: "none",
                        fontSize: 13, cursor: "pointer", lineHeight: 1 }}>
         {item.isWant ? "❤️" : "🤍"}
       </button>
-    </div>
+    </button>
   );
 };
 
 const GoodCard = ({ item, onTap, onWant, onDone }:
   { item: Item; onTap: () => void; onWant: () => void; onDone: () => void }) => {
   const s = CATEGORY_STYLE[item.category] ?? CATEGORY_STYLE["その他"];
+  const hasPhoto = !!item.placePhotoRef;
   return (
-    <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", height: 130 }}>
-      {/* 背景グラデーション */}
-      <div style={{ position: "absolute", inset: 0, background: s.bg }} />
-      {/* 絵文字 */}
-      <div style={{ position: "absolute", inset: 0, display: "flex",
-                    alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 36, opacity: 0.75,
-                       filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))" }}>
-          {s.emoji}
-        </span>
-      </div>
-      {/* 下部グラデーションオーバーレイ（全幅・角丸対応） */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 64,
-                    background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
+    // カード全体をボタンにしてタップ判定を全面に
+    <button onClick={onTap}
+            style={{ position: "relative", borderRadius: 12, overflow: "hidden", height: 130,
+                     border: "none", padding: 0, cursor: "pointer", width: "100%" }}>
+      {/* 背景：写真 or グラデーション */}
+      {hasPhoto ? (
+        <img src={photoUrl(item.placePhotoRef!)} alt={item.title}
+             style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
+                      objectFit: "cover" }} />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: s.bg }} />
+      )}
+      {/* 絵文字（写真なしのみ） */}
+      {!hasPhoto && (
+        <div style={{ position: "absolute", inset: 0, display: "flex",
+                      alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 36, opacity: 0.75,
+                         filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))" }}>
+            {s.emoji}
+          </span>
+        </div>
+      )}
+      {/* 暗幕オーバーレイ */}
+      <div style={{ position: "absolute", inset: 0,
+                    background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 40%, rgba(0,0,0,0.7) 100%)",
                     pointerEvents: "none" }} />
       {/* ✓ 完了ボタン（右上） */}
       <button onClick={(e) => { e.stopPropagation(); onDone(); }}
@@ -363,26 +378,32 @@ const GoodCard = ({ item, onTap, onWant, onDone }:
           <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
-      {/* タイトルタップ領域 */}
-      <button onClick={onTap}
-              style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
-                       padding: "8px 10px 9px 10px", background: "none", border: "none",
-                       cursor: "pointer", textAlign: "left" }}>
-        <p style={{ fontSize: 10, width: "85%", fontWeight: 500, color: "#fff", lineHeight: 1.35,
-                    fontFamily: "var(--font-sans)",
+      {/* Google評価バッジ（左上、写真ありかつGoCardの評価なし場合のみ） */}
+      {item.placeRating != null && (
+        <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.5)",
+                      color: "#fff", fontSize: 9, padding: "2px 6px", borderRadius: 20,
+                      display: "flex", alignItems: "center", gap: 2, zIndex: 2 }}>
+          <span style={{ color: "#F5C842" }}>★</span>{item.placeRating.toFixed(1)}
+        </div>
+      )}
+      {/* タイトル（下部） */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
+                    padding: "8px 28px 9px 10px", textAlign: "left" }}>
+        <p style={{ fontSize: 10, fontWeight: 500, color: "#fff", lineHeight: 1.35,
+                    fontFamily: "var(--font-sans)", margin: 0,
                     display: "-webkit-box", WebkitLineClamp: 1,
                     WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {item.title}
         </p>
-      </button>
-      {/* ❤️ お気に入り（DOM最後 + zIndex:3 でタイトルの上に出る） */}
+      </div>
+      {/* ❤️ お気に入り（右下） */}
       <button onClick={(e) => { e.stopPropagation(); onWant(); }}
               style={{ position: "absolute", bottom: 10, right: 8, zIndex: 3,
                        background: "transparent", border: "none",
                        fontSize: 13, cursor: "pointer", lineHeight: 1 }}>
         {item.isWant ? "❤️" : "🤍"}
       </button>
-    </div>
+    </button>
   );
 };
 
@@ -415,9 +436,15 @@ const DoneRow = ({ item, onTap }: { item: Item; onTap: () => void }) => {
                      padding: "11px 0", borderBottom: "1px solid rgba(0,0,0,0.06)",
                      background: "transparent", border: "none", cursor: "pointer", opacity: 0.55 }}>
       <div style={{ width: 46, height: 46, borderRadius: 10, flexShrink: 0,
+                    overflow: "hidden", position: "relative",
                     background: s.bg, display: "flex", alignItems: "center",
                     justifyContent: "center", fontSize: 20 }}>
-        {s.emoji}
+        {item.placePhotoRef ? (
+          <img src={photoUrl(item.placePhotoRef)} alt={item.title}
+               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          s.emoji
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
         <p style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-main)",
@@ -445,15 +472,9 @@ const NAV_ITEMS = [
   {
     path: "/suggest", label: "Ask AI",
     icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      {/* 大きい4点スター（中央） */}
-      <path d="M10 2L11.4 8.6L18 10L11.4 11.4L10 18L8.6 11.4L2 10L8.6 8.6Z"
-            fill="currentColor"/>
-      {/* 中4点スター（右上） */}
-      <path d="M17.5 1L18.3 3.7L21 4.5L18.3 5.3L17.5 8L16.7 5.3L14 4.5L16.7 3.7Z"
-            fill="currentColor"/>
-      {/* 小4点スター（左下） */}
-      <path d="M4.5 15L5 16.5L6.5 17L5 17.5L4.5 19L4 17.5L2.5 17L4 16.5Z"
-            fill="currentColor"/>
+      <path d="M10 2L11.4 8.6L18 10L11.4 11.4L10 18L8.6 11.4L2 10L8.6 8.6Z" fill="currentColor"/>
+      <path d="M17.5 1L18.3 3.7L21 4.5L18.3 5.3L17.5 8L16.7 5.3L14 4.5L16.7 3.7Z" fill="currentColor"/>
+      <path d="M4.5 15L5 16.5L6.5 17L5 17.5L4.5 19L4 17.5L2.5 17L4 16.5Z" fill="currentColor"/>
     </svg>,
   },
   {

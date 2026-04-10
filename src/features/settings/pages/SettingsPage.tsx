@@ -91,7 +91,9 @@ export const SettingsPage = () => {
       {/* ヘッダー */}
       <header style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 12,
                        padding: "30px 20px 14px",
-                       borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+                       borderBottom: "1px solid rgba(0,0,0,0.07)",
+                       position: "sticky", top: 0, zIndex: 20,
+                       background: "var(--color-bg)" }}>
         <button onClick={() => navigate("/home")}
                 style={{ background: "none", border: "none", cursor: "pointer",
                          padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>

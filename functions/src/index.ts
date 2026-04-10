@@ -2,10 +2,14 @@ import { setGlobalOptions } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
+import * as admin from "firebase-admin";
+
+admin.initializeApp();
 
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
 
-const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const geminiApiKey  = defineSecret("GEMINI_API_KEY");
+const mapsServerKey = defineSecret("MAPS_SERVER_KEY");
 
 // ── アイテム生成（ヒアリング結果 → 50件JSON） ──────────────
 export const generateItems = onCall(
@@ -195,6 +199,64 @@ ${itemList}
       const msg = error instanceof Error ? error.message : String(error);
       console.error("generateMemory error:", msg);
       throw new HttpsError("internal", `生成エラー: ${msg}`);
+    }
+  }
+);
+
+// ── Places エンリッチ（アイテムにGoogle Places情報を付与） ────────────
+export const enrichItem = onCall(
+  { invoker: "public", secrets: [mapsServerKey], enforceAppCheck: false },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    const { pairId, itemId, title } = request.data as {
+      pairId: string;
+      itemId: string;
+      title: string;
+    };
+
+    if (!pairId || !itemId || !title) {
+      throw new HttpsError("invalid-argument", "パラメータが不足しています。");
+    }
+
+    try {
+      const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": mapsServerKey.value(),
+          "X-Goog-FieldMask": "places.id,places.rating,places.photos",
+        },
+        body: JSON.stringify({ textQuery: title }),
+      });
+
+      const data = await res.json() as {
+        places?: Array<{
+          id: string;
+          rating?: number;
+          photos?: Array<{ name: string }>;
+        }>;
+      };
+
+      const place = data.places?.[0];
+
+      // placeId を "" にすることで「検索済みだが未発見」を表し、再呼び出しを防ぐ
+      await admin.firestore()
+        .doc(`pairs/${pairId}/items/${itemId}`)
+        .update({
+          placeId:       place?.id            ?? "",
+          placeRating:   place?.rating         ?? null,
+          placePhotoRef: place?.photos?.[0]?.name ?? null,
+        });
+
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("enrichItem error:", msg);
+      throw new HttpsError("internal", `エンリッチエラー: ${msg}`);
     }
   }
 );

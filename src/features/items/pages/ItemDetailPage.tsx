@@ -1,10 +1,21 @@
 // src/features/items/pages/ItemDetailPage.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../../firebase/functions";
 import { useItems } from "../hooks/useItems";
 import { Loading } from "../../../components/Loading";
 import { usePair } from "../../../contexts/PairContext";
 import type { Item } from "../../../types";
+
+const MAPS_KEY = import.meta.env.VITE_MAPS_BROWSER_KEY as string;
+const PLACE_CATEGORIES = ["おでかけ", "食事", "スポーツ", "映画", "音楽"] as const;
+
+const photoUrl = (photoRef: string) =>
+  `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=600&key=${MAPS_KEY}`;
+
+const mapsSearchUrl = (title: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title)}`;
 
 export const ItemDetailPage = () => {
   const { itemId } = useParams<{ itemId: string }>();
@@ -20,6 +31,7 @@ export const ItemDetailPage = () => {
   const [memoChanged, setMemoChanged] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  const enrichCalled = useRef(false);
 
   useEffect(() => {
     if (!pairLoading && !pairId) navigate("/", { replace: true });
@@ -32,6 +44,22 @@ export const ItemDetailPage = () => {
     setMemo(item.memo ?? "");
     setRating(item.rating ?? null);
   }, [item]);
+
+  // Places エンリッチ：placeId が null（未取得）かつ対象カテゴリのとき1回だけ呼ぶ
+  useEffect(() => {
+    if (!item || !pairId || enrichCalled.current) return;
+    const needsEnrich =
+      item.placeId === null &&
+      (PLACE_CATEGORIES as readonly string[]).includes(item.category);
+    if (!needsEnrich) return;
+
+    enrichCalled.current = true;
+    const fn = httpsCallable(functions, "enrichItem");
+    fn({ pairId, itemId: item.itemId, title: item.title }).catch(() => {
+      // エラーは無視（次回アクセス時にも placeId === null のまま再試行される）
+      enrichCalled.current = false;
+    });
+  }, [item, pairId]);
 
   const handleTitleEdit = () => {
     if (!item) return;
@@ -83,161 +111,225 @@ export const ItemDetailPage = () => {
   );
 
   const isDone = item.status === "done";
+  const isPlaceCategory = (PLACE_CATEGORIES as readonly string[]).includes(item.category);
+  const hasPhoto = !!item.placePhotoRef;
+  const isEnriching = item.placeId === null && isPlaceCategory;
 
   return (
-    <div className="flex flex-col min-h-screen px-4 pt-10 pb-8"
+    <div className="flex flex-col min-h-screen pb-8"
          style={{ background: "var(--color-bg)", fontFamily: "var(--font-sans)" }}>
-      {/* ヘッダー */}
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(backTo)}
-                style={{ background: "none", border: "none", cursor: "pointer",
-                         padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        {editingTitle ? (
-          <input
-            autoFocus
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={handleTitleSave}
-            onKeyDown={handleTitleKeyDown}
-            maxLength={60}
-            style={{ flex: 1, fontSize: 17, fontWeight: 700, fontFamily: "var(--font-sans)",
-                     color: "var(--color-text-main)", background: "transparent",
-                     border: "none", borderBottom: "1.5px solid var(--color-primary)",
-                     outline: "none", padding: "2px 0" }}
+
+      {/* サムネイル（写真あり） */}
+      {hasPhoto ? (
+        <div style={{ position: "relative", width: "100%", height: 220, flexShrink: 0 }}>
+          <img
+            src={photoUrl(item.placePhotoRef!)}
+            alt={item.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
-        ) : (
-          <button onClick={handleTitleEdit}
-                  style={{ flex: 1, textAlign: "left", background: "transparent",
-                           border: "none", cursor: "pointer", display: "flex",
-                           alignItems: "center", gap: 6, minWidth: 0 }}>
-            <span style={{ fontSize: 17, fontWeight: 700, fontFamily: "var(--font-sans)",
-                           color: "var(--color-text-main)", overflow: "hidden",
-                           textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {item.title}
-            </span>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
-              <path d="M9 2l2 2L4 11H2V9L9 2Z" stroke="var(--color-text-soft)"
-                    strokeWidth="1.3" strokeLinejoin="round"/>
+          <div style={{ position: "absolute", inset: 0,
+                        background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 50%, rgba(0,0,0,0.5) 100%)" }} />
+          {/* 戻るボタン（写真上） */}
+          <button onClick={() => navigate(backTo)}
+                  style={{ position: "absolute", top: 16, left: 16,
+                           background: "rgba(0,0,0,0.4)", border: "none", cursor: "pointer",
+                           borderRadius: "50%", width: 36, height: 36,
+                           display: "flex", alignItems: "center", justifyContent: "center",
+                           color: "#fff" }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+          {/* お気に入りボタン（写真上） */}
+          <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
+                  style={{ position: "absolute", top: 12, right: 14, background: "none",
+                           border: "none", cursor: "pointer", fontSize: 26 }}>
+            {item.isWant ? "❤️" : "🤍"}
+          </button>
+          {/* Google評価（写真上） */}
+          {item.placeRating != null && (
+            <div style={{ position: "absolute", bottom: 12, right: 14,
+                          background: "rgba(0,0,0,0.55)", borderRadius: 20,
+                          padding: "4px 10px", display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 13, color: "#FFD700" }}>★</span>
+              <span style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>
+                {item.placeRating.toFixed(1)}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* 写真なし：通常ヘッダー */
+        <div style={{ paddingTop: 40, paddingLeft: 16, paddingRight: 16 }}>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(backTo)}
+                    style={{ background: "none", border: "none", cursor: "pointer",
+                             padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
+                      strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div style={{ flex: 1 }} />
+            <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
+                    className="text-2xl">
+              {item.isWant ? "❤️" : "🤍"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 pt-5">
+        {/* タイトル */}
+        <div className="flex items-center gap-2 mb-4">
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={handleTitleKeyDown}
+              maxLength={60}
+              style={{ flex: 1, fontSize: 17, fontWeight: 700, fontFamily: "var(--font-sans)",
+                       color: "var(--color-text-main)", background: "transparent",
+                       border: "none", borderBottom: "1.5px solid var(--color-primary)",
+                       outline: "none", padding: "2px 0" }}
+            />
+          ) : (
+            <button onClick={handleTitleEdit}
+                    style={{ flex: 1, textAlign: "left", background: "transparent",
+                             border: "none", cursor: "pointer", display: "flex",
+                             alignItems: "center", gap: 6, minWidth: 0 }}>
+              <span style={{ fontSize: 17, fontWeight: 700, fontFamily: "var(--font-sans)",
+                             color: "var(--color-text-main)", overflow: "hidden",
+                             textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item.title}
+              </span>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M9 2l2 2L4 11H2V9L9 2Z" stroke="var(--color-text-soft)"
+                      strokeWidth="1.3" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* カテゴリ・タグ */}
+        <div className="flex gap-2 mb-5 flex-wrap">
+          <Tag label={item.category} />
+          <Tag label={item.difficulty === "easy" ? "気軽" : "特別"} />
+          <Tag label={item.type === "outdoor" ? "屋外" : "屋内"} />
+          {isEnriching && (
+            <span style={{ fontSize: 11, color: "var(--color-text-soft)", alignSelf: "center" }}>
+              地図情報を取得中...
+            </span>
+          )}
+        </div>
+
+        {/* Google マップリンク */}
+        {isPlaceCategory && (
+          <a
+            href={mapsSearchUrl(item.title)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card p-4 mb-4"
+            style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 12 }}
+          >
+            <span style={{ fontSize: 20, flexShrink: 0 }}>🗺️</span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600,
+                           color: "var(--color-primary)" }}>
+              Google マップで見る
+            </span>
+            {item.placeRating != null && !hasPhoto && (
+              <span style={{ fontSize: 13, color: "var(--color-text-mid)", fontWeight: 600 }}>
+                ★ {item.placeRating.toFixed(1)}
+              </span>
+            )}
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+              <path d="M3 11L11 3M11 3H6M11 3V8" stroke="var(--color-primary)"
+                    strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
         )}
-        <button onClick={() => toggleIsWant(item.itemId, item.isWant)}
-                title={item.isWant ? "お気に入り解除" : "お気に入り登録"}
-                className="text-2xl">
-          {item.isWant ? "❤️" : "🤍"}
+
+        {/* 完了チェック */}
+        <div className="card p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold" style={{ color: "var(--color-text-main)" }}>
+                {isDone ? "✅ 完了！" : "⏳ 未完了"}
+              </p>
+              {isDone && item.completedAt && (
+                <p className="text-xs mt-0.5" style={{ color: "var(--color-text-soft)" }}>
+                  {(item.completedAt as { toDate: () => Date }).toDate().toLocaleDateString("ja-JP")}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setStatus(item.itemId, isDone ? "todo" : "done")}
+              className="px-4 py-2 rounded-full font-bold text-sm"
+              style={{
+                background: isDone ? "var(--color-border)" : "var(--color-primary)",
+                color: isDone ? "var(--color-text-mid)" : "white",
+              }}
+            >
+              {isDone ? "取り消す" : "完了にする"}
+            </button>
+          </div>
+        </div>
+
+        {/* 評価 */}
+        {isDone && (
+          <div className="card p-4 mb-4">
+            <p className="text-sm font-bold mb-2" style={{ color: "var(--color-text-main)" }}>
+              評価
+            </p>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button key={star} onClick={() => handleRating(star)} className="text-2xl">
+                  {rating != null && star <= rating ? "⭐" : "☆"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* メモ */}
+        <div className="card p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold" style={{ color: "var(--color-text-main)" }}>メモ</p>
+            <span className="text-xs" style={{ color: "var(--color-text-soft)" }}>
+              {memo.length} / 100
+            </span>
+          </div>
+          <textarea
+            className="w-full text-sm outline-none resize-none rounded-xl p-2"
+            style={{ background: "var(--color-bg)", color: "var(--color-text-main)", minHeight: 160 }}
+            placeholder="感想やメモを残そう..."
+            maxLength={100}
+            value={memo}
+            onChange={(e) => { setMemo(e.target.value); setMemoChanged(true); }}
+          />
+          {memoChanged && (
+            <button
+              className="btn-primary mt-2"
+              onClick={handleSaveMemo}
+              disabled={saving}
+            >
+              {saving ? "保存中..." : "メモを保存"}
+            </button>
+          )}
+        </div>
+
+        {/* 削除 */}
+        <button
+          onClick={handleDelete}
+          className="text-sm text-center mt-4 w-full"
+          style={{ color: "var(--color-text-soft)" }}
+        >
+          このアイテムを削除する
         </button>
       </div>
-
-      {/* カテゴリ・タグ */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <Tag label={item.category} />
-        <Tag label={item.difficulty === "easy" ? "気軽" : "特別"} />
-        <Tag label={item.type === "outdoor" ? "屋外" : "屋内"} />
-      </div>
-
-      {/* Google マップリンク（おでかけ・食事のみ） */}
-      {(item.category === "おでかけ" || item.category === "食事") && (
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.title)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="card p-4 mb-4 flex items-center gap-3"
-          style={{ textDecoration: "none", display: "flex" }}
-        >
-          <span style={{ fontSize: 22, flexShrink: 0 }}>🗺️</span>
-          <span style={{ flex: 1, fontSize: 14, fontWeight: 600,
-                         color: "var(--color-primary)" }}>
-            Google マップで探す
-          </span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-            <path d="M3 11L11 3M11 3H6M11 3V8" stroke="var(--color-primary)"
-                  strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </a>
-      )}
-
-      {/* 完了チェック */}
-      <div className="card p-4 mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-bold" style={{ color: "var(--color-text-main)" }}>
-              {isDone ? "✅ 完了！" : "⏳ 未完了"}
-            </p>
-            {isDone && item.completedAt && (
-              <p className="text-xs mt-0.5" style={{ color: "var(--color-text-soft)" }}>
-                {(item.completedAt as { toDate: () => Date }).toDate().toLocaleDateString("ja-JP")}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => setStatus(item.itemId, isDone ? "todo" : "done")}
-            className="px-4 py-2 rounded-full font-bold text-sm"
-            style={{
-              background: isDone ? "var(--color-border)" : "var(--color-primary)",
-              color: isDone ? "var(--color-text-mid)" : "white",
-            }}
-          >
-            {isDone ? "取り消す" : "完了にする"}
-          </button>
-        </div>
-      </div>
-
-      {/* 評価 */}
-      {isDone && (
-        <div className="card p-4 mb-4">
-          <p className="text-sm font-bold mb-2" style={{ color: "var(--color-text-main)" }}>
-            評価
-          </p>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button key={star} onClick={() => handleRating(star)} className="text-2xl">
-                {rating != null && star <= rating ? "⭐" : "☆"}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* メモ */}
-      <div className="card p-4 mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-bold" style={{ color: "var(--color-text-main)" }}>メモ</p>
-          <span className="text-xs" style={{ color: "var(--color-text-soft)" }}>
-            {memo.length} / 100
-          </span>
-        </div>
-        <textarea
-          className="w-full text-sm outline-none resize-none rounded-xl p-2"
-          style={{ background: "var(--color-bg)", color: "var(--color-text-main)", minHeight: 160 }}
-          placeholder="感想やメモを残そう..."
-          maxLength={100}
-          value={memo}
-          onChange={(e) => { setMemo(e.target.value); setMemoChanged(true); }}
-        />
-        {memoChanged && (
-          <button
-            className="btn-primary mt-2"
-            onClick={handleSaveMemo}
-            disabled={saving}
-          >
-            {saving ? "保存中..." : "メモを保存"}
-          </button>
-        )}
-      </div>
-
-      {/* 削除 */}
-      <button
-        onClick={handleDelete}
-        className="text-sm text-center mt-4"
-        style={{ color: "var(--color-text-soft)" }}
-      >
-        このアイテムを削除する
-      </button>
     </div>
   );
 };

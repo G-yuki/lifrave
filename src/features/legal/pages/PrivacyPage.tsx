@@ -78,7 +78,7 @@ export const PrivacyPage = () => {
 
         <p style={{ fontSize: 11, color: "var(--color-text-soft)", marginTop: 32,
                     textAlign: "right" }}>
-          制定日：2026年4月
+          制定日：2026年4月<br />© 2026 KataLog
         </p>
       </div>
     </div>

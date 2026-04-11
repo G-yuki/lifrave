@@ -8,6 +8,7 @@ import { usePair } from "../../../contexts/PairContext";
 import { db } from "../../../firebase/firestore";
 import { doc, getDoc } from "firebase/firestore";
 import { CATEGORY_STYLE } from "../../../lib/constants";
+import { BottomNav } from "../../../components/BottomNav";
 import type { Item, Category } from "../../../types";
 
 type Filter = "all" | Category;
@@ -37,8 +38,8 @@ export const HomePage = () => {
       const members = pairSnap.data().members as string[];
       const names = await Promise.all(members.map((uid) => getDisplayName(uid)));
       const validNames = names.filter(Boolean) as string[];
-      if (validNames.length >= 2) {
-        setPairNames(`${validNames[0]} & ${validNames[1]}`);
+      if (validNames.length > 0) {
+        setPairNames(validNames.join(" & "));
       }
     })();
   }, [pairId, pairLoading, navigate]);
@@ -62,36 +63,33 @@ export const HomePage = () => {
                   background: "var(--color-bg)" }}>
 
       {/* ── ヘッダー ── */}
-      <header style={{ flexShrink: 0, padding: "12px 20px 10px",
-                       background: "var(--color-bg)", borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-          {/* 左: ロゴ */}
-          <img src="/logo.png" alt="KataLog" style={{ height: 25, justifySelf: "start" }} />
-          {/* 中央: ペア名 */}
-          <p style={{ fontSize: 11, color: "var(--color-text-soft)", letterSpacing: "0.05em",
-                      fontFamily: "var(--font-sans)", whiteSpace: "nowrap" }}>
+      <header style={{ flexShrink: 0, padding: "14px 20px 10px",
+                       background: "var(--color-bg)", borderBottom: "1px solid rgba(0,0,0,0.07)",
+                       position: "sticky", top: 0, zIndex: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 500,
+                       color: "var(--color-text-main)", letterSpacing: "0.01em" }}>
+            LIST: リスト一覧
+          </h1>
+          {items.length > 0 && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--color-primary)",
+                             fontFamily: "var(--font-sans)", lineHeight: 1 }}>
+                {doneItems.length}
+              </span>
+              <span style={{ fontSize: 10, color: "var(--color-text-soft)",
+                             fontFamily: "var(--font-sans)" }}>
+                /{items.length} 完了
+              </span>
+            </div>
+          )}
+        </div>
+        {pairNames && (
+          <p style={{ fontSize: 11, color: "var(--color-text-mid)", marginTop: 3,
+                      fontFamily: "var(--font-sans)", letterSpacing: "0.04em" }}>
             {pairNames}
           </p>
-          {/* 右: 進捗 */}
-          <div style={{ justifySelf: "end" }}>
-            {items.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--color-primary)",
-                                 fontFamily: "var(--font-sans)", lineHeight: 1 }}>
-                    {doneItems.length}
-                  </span>
-                  <span style={{ fontSize: 10, color: "var(--color-text-soft)" }}>
-                    /{items.length}
-                  </span>
-                </div>
-                <span style={{ fontSize: 10, color: "var(--color-text-soft)", letterSpacing: "0.04em" }}>
-                  完了
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
         {items.length > 0 && (
           <div style={{ height: 3, background: "rgba(0,0,0,0.08)",
                         borderRadius: 2, overflow: "hidden", marginTop: 8 }}>
@@ -229,28 +227,7 @@ export const HomePage = () => {
       </div>
 
       {/* ── ボトムナビ ── */}
-      <nav style={{ flexShrink: 0, background: "var(--color-bg)",
-                    borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-        <div style={{ display: "flex", padding: "10px 0 6px" }}>
-          {NAV_ITEMS.map(({ path, label, icon }) => (
-            <button key={path} onClick={() => navigate(path)}
-                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-                             gap: 3, background: "transparent", border: "none", cursor: "pointer",
-                             color: "var(--color-text-mid)" }}>
-              {icon}
-              <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase",
-                             fontWeight: 500, fontFamily: "var(--font-sans)" }}>
-                {label}
-              </span>
-            </button>
-          ))}
-        </div>
-        <p style={{ textAlign: "center", fontSize: 9, letterSpacing: "0.12em",
-                    color: "var(--color-text-soft)", paddingBottom: 16,
-                    fontFamily: "var(--font-serif)" }}>
-          思い出を、かたちに。/ Your Life, Engraved.
-        </p>
-      </nav>
+      <BottomNav />
     </div>
   );
 };
@@ -482,35 +459,3 @@ const DoneRow = ({ item, onTap }: { item: Item; onTap: () => void }) => {
   );
 };
 
-const NAV_ITEMS = [
-  {
-    path: "/home", label: "List",
-    icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect x="2" y="10" width="8" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-      <rect x="12" y="4" width="8" height="16" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-    </svg>,
-  },
-  {
-    path: "/suggest", label: "Ask AI",
-    icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <path d="M10 2L11.4 8.6L18 10L11.4 11.4L10 18L8.6 11.4L2 10L8.6 8.6Z" fill="currentColor"/>
-      <path d="M17.5 1L18.3 3.7L21 4.5L18.3 5.3L17.5 8L16.7 5.3L14 4.5L16.7 3.7Z" fill="currentColor"/>
-      <path d="M4.5 15L5 16.5L6.5 17L5 17.5L4.5 19L4 17.5L2.5 17L4 16.5Z" fill="currentColor"/>
-    </svg>,
-  },
-  {
-    path: "/memory", label: "Memory",
-    icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <path d="M4 15V8a7 7 0 0114 0v7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <rect x="2" y="14" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-      <rect x="16" y="14" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-    </svg>,
-  },
-  {
-    path: "/setting", label: "Setting",
-    icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <circle cx="11" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
-      <path d="M4 19c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-    </svg>,
-  },
-];

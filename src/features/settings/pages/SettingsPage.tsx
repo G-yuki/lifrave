@@ -1,6 +1,7 @@
 // src/features/settings/pages/SettingsPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { BottomNav } from "../../../components/BottomNav";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { Loading } from "../../../components/Loading";
 import {
@@ -107,19 +108,10 @@ export const SettingsPage = () => {
                   background: "var(--color-bg)", fontFamily: "var(--font-sans)" }}>
 
       {/* ヘッダー */}
-      <header style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 12,
-                       padding: "30px 20px 14px",
+      <header style={{ flexShrink: 0, padding: "30px 20px 14px",
                        borderBottom: "1px solid rgba(0,0,0,0.07)",
                        position: "sticky", top: 0, zIndex: 20,
                        background: "var(--color-bg)" }}>
-        <button onClick={() => navigate("/home")}
-                style={{ background: "none", border: "none", cursor: "pointer",
-                         padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 500, color: "var(--color-text-main)",
                      letterSpacing: "0.01em" }}>
           Setting: 設定
@@ -319,6 +311,9 @@ export const SettingsPage = () => {
           </div>
         </div>
       )}
+
+      {/* ── ボトムナビ ── */}
+      <BottomNav />
     </div>
   );
 };

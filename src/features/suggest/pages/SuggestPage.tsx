@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loading } from "../../../components/Loading";
+import { BottomNav } from "../../../components/BottomNav";
 import { useGenerateItems } from "../../setup/hooks/useGenerateItems";
 import { addSuggestedItems } from "../../items/services/itemService";
 import { usePair } from "../../../contexts/PairContext";
@@ -31,7 +32,7 @@ export const SuggestPage = () => {
 
   const { pairId, loading: pairLoading } = usePair();
   const [step, setStep] = useState<Step>("home");
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(() => !localStorage.getItem("askAiIntroSeen"));
   const [hearing, setHearing] = useState<Hearing | null>(null);
   const [editHearing, setEditHearing] = useState<Partial<Hearing>>({});
   const [suggestions, setSuggestions] = useState<ItemDraft[]>([]);
@@ -107,22 +108,20 @@ export const SuggestPage = () => {
                        borderBottom: "1px solid rgba(0,0,0,0.07)",
                        position: "sticky", top: 0, zIndex: 20,
                        background: "var(--color-bg)" }}>
-        <button
-          onClick={() => {
-            if (step === "update-hearing") setStep("home");
-            else if (step === "results") setStep("home");
-            else navigate("/home");
-          }}
-          style={{ background: "none", border: "none", cursor: "pointer",
-                   padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+        {(step === "update-hearing" || step === "results") && (
+          <button
+            onClick={() => setStep("home")}
+            style={{ background: "none", border: "none", cursor: "pointer",
+                     padding: "4px 8px 4px 0", color: "var(--color-text-mid)" }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 500, color: "var(--color-text-main)",
                      letterSpacing: "0.01em" }}>
-          {step === "update-hearing" ? "プランを更新" : "Ask AI"}
+          {step === "update-hearing" ? "プランを更新" : "ASK AI: おすすめ体験提案"}
         </h1>
       </header>
 
@@ -329,7 +328,7 @@ export const SuggestPage = () => {
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowIntro(false)}
+            <button onClick={() => { localStorage.setItem("askAiIntroSeen", "1"); setShowIntro(false); }}
                     style={{ marginTop: 8, padding: "14px", background: "var(--color-primary)",
                              color: "#fff", border: "none", borderRadius: 12, fontSize: 15,
                              fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
@@ -358,6 +357,9 @@ export const SuggestPage = () => {
           </button>
         </div>
       )}
+
+      {/* ── ボトムナビ ── */}
+      <BottomNav />
     </div>
   );
 };

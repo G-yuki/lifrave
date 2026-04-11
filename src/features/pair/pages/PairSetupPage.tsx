@@ -12,7 +12,7 @@ import {
   getPair,
   reissueInviteToken,
 } from "../services/pairService";
-import { generateInviteUrl, getInviteParams } from "../../../lib/token";
+import { generateInviteUrl, getInviteParams, clearInviteParams } from "../../../lib/token";
 import { db } from "../../../firebase/firestore";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
@@ -82,6 +82,7 @@ export const PairSetupPage = () => {
       if (inviteParams && name) {
         const result = await joinPair(user.uid, inviteParams.pairId, inviteParams.token);
         if (result.success) {
+          clearInviteParams();
           window.history.replaceState({}, "", "/");
           navigate("/setup/partner-waiting", { replace: true });
           return;
@@ -128,10 +129,15 @@ export const PairSetupPage = () => {
     if (inviteParams) {
       const result = await joinPair(user.uid, inviteParams.pairId, inviteParams.token);
       if (result.success) {
+        clearInviteParams();
         window.history.replaceState({}, "", "/");
         navigate("/setup/partner-waiting", { replace: true });
         return;
       }
+      // 参加失敗 → エラーを表示してニックネーム画面に留まる
+      setNicknameError(result.error ?? "招待リンクが無効です。パートナーに新しいリンクを送ってもらってください。");
+      setNicknameSaving(false);
+      return;
     }
 
     setNicknameSaving(false);

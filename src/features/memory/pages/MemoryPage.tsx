@@ -7,6 +7,20 @@ import { usePair } from "../../../contexts/PairContext";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../../firebase/functions";
 import { CATEGORY_STYLE } from "../../../lib/constants";
+import { db } from "../../../firebase/firestore";
+import { doc, getDoc, type Timestamp } from "firebase/firestore";
+
+/** Timestamp から "X年Xヶ月" 形式の文字列を計算 */
+const calcPeriod = (start: Date): string => {
+  const now = new Date();
+  const totalMonths =
+    (now.getFullYear() - start.getFullYear()) * 12 +
+    (now.getMonth() - start.getMonth());
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  if (years === 0 && months === 0) return "1ヶ月未満";
+  return `${years > 0 ? `${years}年` : ""}${months > 0 ? `${months}ヶ月` : ""}`;
+};
 
 export const MemoryPage = () => {
   const navigate = useNavigate();
@@ -21,10 +35,23 @@ export const MemoryPage = () => {
   const [memory, setMemory] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<string>("");
 
   useEffect(() => {
     if (!pairLoading && !pairId) navigate("/");
   }, [pairId, pairLoading, navigate]);
+
+  // ペア開始日を取得して期間を計算
+  useEffect(() => {
+    if (!pairId) return;
+    (async () => {
+      const snap = await getDoc(doc(db, "pairs", pairId));
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const ts: Timestamp | undefined = data.matchingFinalizedAt ?? data.createdAt;
+      if (ts) setPeriod(calcPeriod(ts.toDate()));
+    })();
+  }, [pairId]);
 
   const handleGenerate = async () => {
     if (doneItems.length === 0) return;
@@ -33,7 +60,10 @@ export const MemoryPage = () => {
     setMemory(null);
     try {
       const fn = httpsCallable<
-        { items: { title: string; category: string; rating: number | null; memo: string | null }[] },
+        {
+          items: { title: string; category: string; rating: number | null; memo: string | null; completedMonth: string }[];
+          period: string;
+        },
         { memory: string }
       >(functions, "generateMemory");
       const payload = doneItems.map((i) => ({
@@ -41,8 +71,11 @@ export const MemoryPage = () => {
         category: i.category,
         rating: i.rating,
         memo: i.memo,
+        completedMonth: i.completedAt
+          ? `${(i.completedAt as Timestamp).toDate().getMonth() + 1}月`
+          : "",
       }));
-      const result = await fn({ items: payload });
+      const result = await fn({ items: payload, period });
       setMemory(result.data.memory);
     } catch {
       setGenError("生成に失敗しました。もう一度お試しください。");
@@ -126,7 +159,7 @@ export const MemoryPage = () => {
               </div>
               <div style={{ flex: 1, borderLeft: "1px solid var(--color-border)", paddingLeft: 16 }}>
                 <p style={{ fontSize: 11, color: "var(--color-text-mid)", lineHeight: 2.2 }}>
-                  ふたりの記録開始から、<strong>X年XXヶ月</strong>が経過。<br/>
+                  ふたりの記録開始から、<strong>{period || "—"}</strong>が経過。<br/>
                   これまでに<strong>{doneItems.length}件</strong>の体験を積み重ねました。<br/>
                   思い出を文章（かたち）にしてみましょう。
                 </p>

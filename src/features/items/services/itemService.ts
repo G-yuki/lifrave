@@ -222,7 +222,7 @@ export const finalizePairMatching = async (pairId: string): Promise<void> => {
   const batch = writeBatch(db);
 
   // matchingFinalizedをatomicにセット（二重実行ガード）
-  batch.update(pairRef, { matchingFinalized: true });
+  batch.update(pairRef, { matchingFinalized: true, matchingFinalizedAt: serverTimestamp() });
 
   pendingSnap.docs.forEach((d) => {
     const data = d.data();

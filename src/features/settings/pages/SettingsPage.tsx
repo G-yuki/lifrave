@@ -6,6 +6,7 @@ import { Loading } from "../../../components/Loading";
 import {
   getDisplayName,
   saveDisplayName,
+  removePairPartner,
 } from "../../pair/services/pairService";
 import { usePair } from "../../../contexts/PairContext";
 import { resetPairList } from "../../items/services/itemService";
@@ -29,6 +30,9 @@ export const SettingsPage = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
 
+  const [showReinviteConfirm, setShowReinviteConfirm] = useState(false);
+  const [reinviting, setReinviting] = useState(false);
+
   useEffect(() => {
     if (!user || pairLoading) return;
     (async () => {
@@ -37,16 +41,16 @@ export const SettingsPage = () => {
         pairId ? getDoc(doc(db, "pairs", pairId)) : Promise.resolve(null),
       ]);
       setNickname(name ?? "");
+      setLoading(false); // ← パートナー名を待たず即座に画面表示
 
+      // パートナー名はバックグラウンドで取得（表示は後から差し込まれる）
       if (pairSnap?.exists()) {
         const members = pairSnap.data().members as string[];
         const partnerUid = members.find((m) => m !== user.uid);
         if (partnerUid) {
-          const pname = await getDisplayName(partnerUid);
-          setPartnerName(pname);
+          getDisplayName(partnerUid).then((pname) => setPartnerName(pname));
         }
       }
-      setLoading(false);
     })();
   }, [user, pairId, pairLoading]);
 
@@ -66,6 +70,15 @@ export const SettingsPage = () => {
     setNickname(trimmed);
     setEditingNickname(false);
     setNicknameSaving(false);
+  };
+
+  const handleReinvite = async () => {
+    if (!pairId || !user) return;
+    setReinviting(true);
+    await removePairPartner(pairId, user.uid);
+    setReinviting(false);
+    setShowReinviteConfirm(false);
+    navigate("/", { replace: true });
   };
 
   const handleReset = async () => {
@@ -167,6 +180,18 @@ export const SettingsPage = () => {
                 {partnerName ?? "（未参加）"}
               </span>
             </Row>
+            <Row label="再招待">
+              <button onClick={() => setShowReinviteConfirm(true)}
+                      style={{ background: "none", border: "none", cursor: "pointer",
+                               color: "var(--color-primary)", fontSize: 13, fontWeight: 500,
+                               display: "flex", alignItems: "center", gap: 4 }}>
+                パートナーを外して再招待
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5"
+                        strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </Row>
           </Section>
         )}
 
@@ -220,6 +245,40 @@ export const SettingsPage = () => {
         </div>
 
       </div>
+
+      {/* 再招待確認ダイアログ */}
+      {showReinviteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+                      display: "flex", alignItems: "flex-end", zIndex: 100 }}
+             onClick={() => setShowReinviteConfirm(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+               style={{ width: "100%", background: "var(--color-bg)", borderRadius: "20px 20px 0 0",
+                        padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <h2 style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 500,
+                         color: "var(--color-text-main)", textAlign: "center" }}>
+              パートナーを外しますか？
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--color-text-mid)", textAlign: "center", lineHeight: 1.7 }}>
+              現在のパートナーとのペアが解除され、<br />
+              リストもすべて削除されます。<br />
+              新しい招待リンクでやり直せます。
+            </p>
+            <button onClick={handleReinvite} disabled={reinviting}
+                    style={{ padding: "14px", background: "var(--color-primary)", color: "#fff",
+                             border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600,
+                             cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+              {reinviting ? "処理中..." : "外して再招待する"}
+            </button>
+            <button onClick={() => setShowReinviteConfirm(false)}
+                    style={{ padding: "14px", background: "transparent",
+                             color: "var(--color-text-mid)", border: "1px solid var(--color-border)",
+                             borderRadius: 12, fontSize: 15, cursor: "pointer",
+                             fontFamily: "var(--font-sans)" }}>
+              キャンセル
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* リストリセット確認ダイアログ */}
       {showResetConfirm && (

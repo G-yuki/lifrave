@@ -149,12 +149,16 @@ export const generateMemory = onCall(
       throw new HttpsError("unauthenticated", "ログインが必要です。");
     }
 
-    const items = request.data?.items as Array<{
-      title: string;
-      category: string;
-      rating: number | null;
-      memo: string | null;
-    }> | undefined;
+    const { items, period } = request.data as {
+      items: Array<{
+        title: string;
+        category: string;
+        rating: number | null;
+        memo: string | null;
+        completedMonth?: string;
+      }> | undefined;
+      period?: string;
+    };
 
     if (!items || items.length === 0) {
       throw new HttpsError("invalid-argument", "完了済みアイテムが必要です。");
@@ -162,32 +166,37 @@ export const generateMemory = onCall(
 
     const itemList = items
       .map((item, i) => {
-        const rating = item.rating != null
-          ? `★${item.rating}${item.rating >= 4 ? "（特に印象的な体験）" : ""}`
-          : "（評価なし）";
-        const memo = item.memo ? `メモ：${item.memo}` : "";
-        return `${i + 1}. 【${item.category}】${item.title} ${rating} ${memo}`.trim();
+        const rating = item.rating != null ? `★${item.rating}` : "評価なし";
+        const month = item.completedMonth ?? "";
+        const memo = item.memo ? ` メモ：${item.memo}` : "";
+        return `${i + 1}. 【${item.category}】${item.title} ${rating}${month ? `・${month}` : ""}${memo}`.trim();
       })
       .join("\n");
 
-    const minChars = 250;
-    const maxChars = items.length > 10 ? 500 : 350;
+    const periodLabel = period ?? "記録中";
 
-    const prompt = `あなたはカップル・夫婦向けの思い出記録AIです。
-以下は、ふたりが一緒に体験した「やりたいことリスト」の完了記録です。
-これをもとに、ふたりへの温かいメッセージを含む思い出の文章を日本語で書いてください。
+    const prompt = `以下のログデータをもとに、指定フォーマット通りに出力してください。
 
-【完了した体験】
+【ふたりの期間】${periodLabel}
+
+【ログデータ】
 ${itemList}
 
-【条件】
-- ${minChars}〜${maxChars}文字程度
-- ふたりへの語りかける口調（「ふたりは〜」「あなたたちは〜」など）
-- 具体的な体験名を織り交ぜて自然な文章にすること
-- 評価★4以上の体験は特に印象的なエピソードがあるように具体的に描写すること
-- 全体のトーンは「懐かしさと期待感が共存する」文体にすること
-- 締めの一文は必ずポジティブかつ具体的な次の行動への言及で終えること
-- JSONや箇条書き不要。本文のみを返すこと`;
+【出力フォーマット】
+ふたりの${periodLabel}
+今期のベスト体験
+🏆 [体験名]（★[評価]・[月]）
+よく行ったジャンル
+[カテゴリ] [■の数で回数を表現] [回数]回
+※■は1回につき1つ。最大8個まで。
+ひとことで言うと
+「[体験全体を表す短いコピー1文]」
+
+【ルール】
+- 余計な前置き・説明文は不要
+- ひとことは20文字以内
+- メモがない体験は評価とカテゴリだけで判断する
+- フォーマット通りに出力する。それ以外は何も書かない`;
 
     try {
       const genAI = new GoogleGenerativeAI(geminiApiKey.value());

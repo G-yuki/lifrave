@@ -22,7 +22,7 @@ export const HomePage = () => {
   const navigate = useNavigate();
   const { pairId, loading: pairLoading } = usePair();
   const [pairNames, setPairNames] = useState("");
-  const { items, loading, setStatus, toggleIsWant } = useItems(pairId);
+  const { items, loading, setStatus, toggleIsWant, removeItem } = useItems(pairId);
 
   const [filter, setFilter] = useState<Filter>("all");
   const [doneOpen, setDoneOpen] = useState(false);
@@ -64,31 +64,33 @@ export const HomePage = () => {
       {/* ── ヘッダー ── */}
       <header style={{ flexShrink: 0, padding: "12px 20px 10px",
                        background: "var(--color-bg)", borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="/logo.png" alt="KataLog" style={{ height: 25 }} />
-            {pairNames && (
-              <p style={{ fontSize: 11, color: "var(--color-text-soft)", letterSpacing: "0.05em" }}>
-                {pairNames}
-              </p>
-            )}
-          </div>
-          {items.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-                <span style={{ fontSize: 18, fontWeight: 700, color: "var(--color-primary)",
-                               fontFamily: "var(--font-sans)", lineHeight: 1 }}>
-                  {doneItems.length}
-                </span>
-                <span style={{ fontSize: 10, color: "var(--color-text-soft)" }}>
-                  /{items.length}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+          {/* 左: ロゴ */}
+          <img src="/logo.png" alt="KataLog" style={{ height: 25, justifySelf: "start" }} />
+          {/* 中央: ペア名 */}
+          <p style={{ fontSize: 11, color: "var(--color-text-soft)", letterSpacing: "0.05em",
+                      fontFamily: "var(--font-sans)", whiteSpace: "nowrap" }}>
+            {pairNames}
+          </p>
+          {/* 右: 進捗 */}
+          <div style={{ justifySelf: "end" }}>
+            {items.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--color-primary)",
+                                 fontFamily: "var(--font-sans)", lineHeight: 1 }}>
+                    {doneItems.length}
+                  </span>
+                  <span style={{ fontSize: 10, color: "var(--color-text-soft)" }}>
+                    /{items.length}
+                  </span>
+                </div>
+                <span style={{ fontSize: 10, color: "var(--color-text-soft)", letterSpacing: "0.04em" }}>
+                  完了
                 </span>
               </div>
-              <span style={{ fontSize: 10, color: "var(--color-text-soft)", letterSpacing: "0.04em" }}>
-                完了
-              </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         {items.length > 0 && (
           <div style={{ height: 3, background: "rgba(0,0,0,0.08)",
@@ -130,7 +132,8 @@ export const HomePage = () => {
                 <GoCard key={item.itemId} item={item}
                         onClick={() => navigate(`/home/${item.itemId}`)}
                         onDone={() => setStatus(item.itemId, "done")}
-                        onWant={() => toggleIsWant(item.itemId, item.isWant)} />
+                        onWant={() => toggleIsWant(item.itemId, item.isWant)}
+                        onDelete={() => removeItem(item.itemId)} />
               ))}
             </div>
           </div>
@@ -146,7 +149,8 @@ export const HomePage = () => {
                 <GoodCard key={item.itemId} item={item}
                           onTap={() => navigate(`/home/${item.itemId}`)}
                           onWant={() => toggleIsWant(item.itemId, item.isWant)}
-                          onDone={() => setStatus(item.itemId, "done")} />
+                          onDone={() => setStatus(item.itemId, "done")}
+                          onDelete={() => removeItem(item.itemId)} />
               ))}
             </div>
           </>
@@ -187,7 +191,8 @@ export const HomePage = () => {
                   <GoodCard key={item.itemId} item={item}
                             onTap={() => navigate(`/home/${item.itemId}`)}
                             onWant={() => toggleIsWant(item.itemId, item.isWant)}
-                            onDone={() => setStatus(item.itemId, "done")} />
+                            onDone={() => setStatus(item.itemId, "done")}
+                            onDelete={() => removeItem(item.itemId)} />
                 ))}
               </div>
             )}
@@ -260,8 +265,8 @@ const SectionLabel = ({ children, style }: { children: React.ReactNode; style?: 
   </p>
 );
 
-const GoCard = ({ item, onClick, onDone, onWant }:
-  { item: Item; onClick: () => void; onDone: () => void; onWant: () => void }) => {
+const GoCard = ({ item, onClick, onDone, onWant, onDelete }:
+  { item: Item; onClick: () => void; onDone: () => void; onWant: () => void; onDelete: () => void }) => {
   const s = CATEGORY_STYLE[item.category] ?? CATEGORY_STYLE["その他"];
   const hasPhoto = !!item.placePhotoRef;
   return (
@@ -271,7 +276,7 @@ const GoCard = ({ item, onClick, onDone, onWant }:
                      position: "relative", border: "none", padding: 0, cursor: "pointer" }}>
       {/* 背景：写真 or グラデーション */}
       {hasPhoto ? (
-        <img src={photoUrl(item.placePhotoRef!)} alt={item.title}
+        <img src={photoUrl(item.placePhotoRef!)} alt={item.title} loading="lazy"
              style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
                       objectFit: "cover" }} />
       ) : (
@@ -310,6 +315,14 @@ const GoCard = ({ item, onClick, onDone, onWant }:
           <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
+      {/* × 削除ボタン（左下） */}
+      <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              style={{ position: "absolute", bottom: 9, left: 8, zIndex: 3,
+                       background: "transparent", border: "none",
+                       fontSize: 13, color: "rgba(255,255,255,0.55)", cursor: "pointer",
+                       lineHeight: 1, padding: 0 }}>
+        ×
+      </button>
       {/* タイトル・カテゴリ（下部） */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
                     padding: "8px 28px 9px 10px", textAlign: "left" }}>
@@ -336,8 +349,8 @@ const GoCard = ({ item, onClick, onDone, onWant }:
   );
 };
 
-const GoodCard = ({ item, onTap, onWant, onDone }:
-  { item: Item; onTap: () => void; onWant: () => void; onDone: () => void }) => {
+const GoodCard = ({ item, onTap, onWant, onDone, onDelete }:
+  { item: Item; onTap: () => void; onWant: () => void; onDone: () => void; onDelete: () => void }) => {
   const s = CATEGORY_STYLE[item.category] ?? CATEGORY_STYLE["その他"];
   const hasPhoto = !!item.placePhotoRef;
   return (
@@ -347,7 +360,7 @@ const GoodCard = ({ item, onTap, onWant, onDone }:
                      border: "none", padding: 0, cursor: "pointer", width: "100%" }}>
       {/* 背景：写真 or グラデーション */}
       {hasPhoto ? (
-        <img src={photoUrl(item.placePhotoRef!)} alt={item.title}
+        <img src={photoUrl(item.placePhotoRef!)} alt={item.title} loading="lazy"
              style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
                       objectFit: "cover" }} />
       ) : (
@@ -377,6 +390,14 @@ const GoodCard = ({ item, onTap, onWant, onDone }:
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
+      </button>
+      {/* × 削除ボタン（左下） */}
+      <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              style={{ position: "absolute", bottom: 9, left: 8, zIndex: 3,
+                       background: "transparent", border: "none",
+                       fontSize: 13, color: "rgba(255,255,255,0.55)", cursor: "pointer",
+                       lineHeight: 1, padding: 0 }}>
+        ×
       </button>
       {/* Google評価バッジ（左上、写真ありかつGoCardの評価なし場合のみ） */}
       {item.placeRating != null && (
@@ -440,7 +461,7 @@ const DoneRow = ({ item, onTap }: { item: Item; onTap: () => void }) => {
                     background: s.bg, display: "flex", alignItems: "center",
                     justifyContent: "center", fontSize: 20 }}>
         {item.placePhotoRef ? (
-          <img src={photoUrl(item.placePhotoRef)} alt={item.title}
+          <img src={photoUrl(item.placePhotoRef)} alt={item.title} loading="lazy"
                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           s.emoji

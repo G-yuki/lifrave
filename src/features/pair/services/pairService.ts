@@ -110,6 +110,54 @@ export const reissueInviteToken = async (pairId: string): Promise<string> => {
 };
 
 /**
+ * パートナーをペアから外し、再招待できる状態に戻す
+ * - パートナーの UID をメンバーから除去
+ * - パートナーの pairId をクリア
+ * - ペア状態フラグをリセット、新しい招待トークンを発行
+ * - items / pendingItems を全削除
+ */
+export const removePairPartner = async (
+  pairId: string,
+  myUid: string
+): Promise<string> => {
+  const pairRef = doc(db, "pairs", pairId);
+  const pairSnap = await getDoc(pairRef);
+  if (!pairSnap.exists()) throw new Error("pair not found");
+
+  const members = pairSnap.data().members as string[];
+  const partnerUid = members.find((m) => m !== myUid);
+
+  const newToken = generateInviteToken();
+  const batch = writeBatch(db);
+
+  // ペア状態をリセット
+  batch.update(pairRef, {
+    members: [myUid],
+    inviteToken: newToken,
+    matchingFinalized: false,
+    creatorSwipesDone: false,
+    partnerSwipesDone: false,
+    hearing: null,
+  });
+
+  // パートナーの pairId をクリア
+  if (partnerUid) {
+    batch.update(doc(db, "users", partnerUid), { pairId: null });
+  }
+
+  // items / pendingItems を全削除
+  const [itemsSnap, pendingSnap] = await Promise.all([
+    getDocs(collection(db, "pairs", pairId, "items")),
+    getDocs(collection(db, "pairs", pairId, "pendingItems")),
+  ]);
+  itemsSnap.forEach((d) => batch.delete(d.ref));
+  pendingSnap.forEach((d) => batch.delete(d.ref));
+
+  await batch.commit();
+  return newToken;
+};
+
+/**
  * ペアを解除する
  * - pair を isActive: false にする
  * - ペアの全メンバーから pairId を削除する

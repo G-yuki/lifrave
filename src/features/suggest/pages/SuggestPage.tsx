@@ -104,7 +104,7 @@ export const SuggestPage = () => {
 
       {/* ヘッダー */}
       <header style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 12,
-                       padding: "30px 20px 14px",
+                       padding: "14px 20px 10px",
                        borderBottom: "1px solid rgba(0,0,0,0.07)",
                        position: "sticky", top: 0, zIndex: 20,
                        background: "var(--color-bg)" }}>
@@ -121,11 +121,11 @@ export const SuggestPage = () => {
         )}
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 500, color: "var(--color-text-main)",
                      letterSpacing: "0.01em" }}>
-          {step === "update-hearing" ? "プランを更新" : "ASK AI: おすすめ体験提案"}
+          {step === "update-hearing" ? "プランを更新" : "SUGGEST: おすすめ体験提案"}
         </h1>
       </header>
 
-      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
+      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", paddingBottom: 80 }}>
 
         {/* ── ホーム ── */}
         {step === "home" && (
@@ -313,7 +313,7 @@ export const SuggestPage = () => {
                 <SparkleIcon size={32} />
               </div>
               <h2 style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-main)" }}>
-                Ask AI とは？
+                SUGGEST とは？
               </h2>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

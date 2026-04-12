@@ -108,18 +108,18 @@ export const SettingsPage = () => {
                   background: "var(--color-bg)", fontFamily: "var(--font-sans)" }}>
 
       {/* ヘッダー */}
-      <header style={{ flexShrink: 0, padding: "30px 20px 14px",
+      <header style={{ flexShrink: 0, padding: "14px 20px 10px",
                        borderBottom: "1px solid rgba(0,0,0,0.07)",
                        position: "sticky", top: 0, zIndex: 20,
                        background: "var(--color-bg)" }}>
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 500, color: "var(--color-text-main)",
                      letterSpacing: "0.01em" }}>
-          Setting: 設定
+          SETTING: 設定
         </h1>
       </header>
 
       {/* スクロールエリア */}
-      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", padding: "20px 20px 40px" }}>
+      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", padding: "20px 20px 80px" }}>
 
         {/* プロフィール */}
         <Section label="プロフィール">

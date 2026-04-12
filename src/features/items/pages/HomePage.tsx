@@ -118,7 +118,7 @@ export const HomePage = () => {
       </div>
 
       {/* ── スクロールエリア ── */}
-      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
+      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", paddingBottom: 80 }}>
 
         {/* Go!! セクション */}
         {goItems.length > 0 && (

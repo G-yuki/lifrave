@@ -14,7 +14,7 @@ import {
 } from "../services/pairService";
 import { generateInviteUrl, getInviteParams, clearInviteParams } from "../../../lib/token";
 import { db } from "../../../firebase/firestore";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDocFromServer, setDoc, onSnapshot } from "firebase/firestore";
 
 type Step = "loading" | "nickname" | "pair";
 
@@ -46,7 +46,7 @@ export const PairSetupPage = () => {
 
       // すでにペア所属 → ペアの状態を確認して適切な画面へ
       if (existingPairId) {
-        const pairSnap = await getDoc(doc(db, "pairs", existingPairId));
+        const pairSnap = await getDocFromServer(doc(db, "pairs", existingPairId));
         if (pairSnap.exists()) {
           const data = pairSnap.data();
           const members = data.members as string[];

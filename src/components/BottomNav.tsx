@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   },
   {
     path: "/suggest",
-    label: "Ask AI",
+    label: "Suggest",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
         <path d="M10 2L11.4 8.6L18 10L11.4 11.4L10 18L8.6 11.4L2 10L8.6 8.6Z" fill="currentColor" />
@@ -56,9 +56,9 @@ export const BottomNav = () => {
       : pathname === path || pathname.startsWith(path + "/");
 
   return (
-    <nav style={{ flexShrink: 0, background: "var(--color-bg)",
-                  borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-      <div style={{ display: "flex", padding: "10px 0 18px" }}>
+    <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+                  background: "var(--color-bg)", borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+      <div style={{ display: "flex", padding: "8px 0", paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))" }}>
         {NAV_ITEMS.map(({ path, label, icon }) => {
           const active = isActive(path);
           return (
